@@ -1,0 +1,14 @@
+{
+  "servers": {
+    "SampleMcpServer": {
+      "type": "stdio",
+      "command": "dotnet",
+      "args": [
+        "run",
+        "--project",
+        "C:\\Users\\dp\\Desktop\\work\\code\\SettlementMcpServer",
+        "--no-build"
+      ]
+    }
+  }
+}

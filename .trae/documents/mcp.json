@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "国新审核数据服务": {
+      "command": "dotnet",
+      "args": [
+        "run",
+        "--project",
+        "C:\\Users\\dp\\Desktop\\work\\code\\SettlementMcpServer",
+        "--no-build"
+      ]
+    }
+  }
+}
