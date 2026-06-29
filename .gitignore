@@ -1,0 +1,46 @@
+# .NET 编译产物
+*.dll
+*.exe
+*.pdb
+*.mdp
+*.msi
+*.msix
+
+# .NET Core/5+ 构建输出
+bin/
+obj/
+out/
+
+# NuGet 包
+*.nupkg
+packages/
+
+# Rider / .NET IDE
+.idea/
+*.sln.iml
+
+# VS Code
+.vscode/
+.trae/
+.mcp/
+
+# User-specific files
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+
+# NuGet
+packages/*
+!packages/repositories.config
+
+# Test Results
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
