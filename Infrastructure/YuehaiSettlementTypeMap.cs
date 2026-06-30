@@ -1,15 +1,14 @@
 using Dapper;
 using SettlementMcpServer.Models;
-using System.Reflection;
 
 namespace SettlementMcpServer.Infrastructure;
 
 /// <summary>
-/// 自定义 Dapper 类型映射器 - 将粤海医保结算表中文列名映射到英文属性名
+/// 自定义 Dapper 类型映射器 - 将YueHai医保结算表中文列名映射到英文属性名
 /// </summary>
-internal sealed class YuehaiSettlementTypeMap : SqlMapper.ITypeMap
+internal sealed class YuehaiSettlementTypeMap : DapperTypeMapBase
 {
-    private static readonly Dictionary<string, string> ColumnMappings = new(StringComparer.OrdinalIgnoreCase)
+    private static readonly Dictionary<string, string> _columnMappings = new(StringComparer.OrdinalIgnoreCase)
     {
         ["就诊ID"] = nameof(YuehaiSettlement.VisitId),
         ["结算ID"] = nameof(YuehaiSettlement.SettlementId),
@@ -78,84 +77,17 @@ internal sealed class YuehaiSettlementTypeMap : SqlMapper.ITypeMap
         ["受单医师姓名"] = nameof(YuehaiSettlement.ReceivingDoctorName),
     };
 
-    private readonly ConstructorInfo? _constructor;
-    private readonly PropertyInfo[] _properties;
+    /// <summary>
+    /// 列名 → 属性名映射字典（由基类要求实现）
+    /// </summary>
+    protected override Dictionary<string, string> ColumnMappings => _columnMappings;
 
     public static void Register()
     {
         SqlMapper.SetTypeMap(typeof(YuehaiSettlement), new YuehaiSettlementTypeMap(typeof(YuehaiSettlement)));
     }
 
-    private YuehaiSettlementTypeMap(Type type)
+    private YuehaiSettlementTypeMap(Type type) : base(type)
     {
-        _properties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
-        _constructor = type.GetConstructors()
-            .OrderByDescending(c => c.GetParameters().Length)
-            .FirstOrDefault();
     }
-
-    public ConstructorInfo? Constructor => _constructor;
-
-    public ConstructorInfo? FindConstructor(string[] names, Type[] types)
-    {
-        return _constructor;
-    }
-
-    public ConstructorInfo? FindExplicitConstructor()
-    {
-        return _constructor;
-    }
-
-    public SqlMapper.IMemberMap GetConstructorParameter(ConstructorInfo constructor, string columnName)
-    {
-        var propertyName = ColumnMappings.TryGetValue(columnName, out var mappedName)
-            ? mappedName
-            : columnName;
-
-        var match = constructor.GetParameters()
-            .FirstOrDefault(p => string.Equals(p.Name, propertyName, StringComparison.OrdinalIgnoreCase));
-
-        return match != null ? new YuehaiSettlementMemberMap(columnName, match) : null!;
-    }
-
-    public SqlMapper.IMemberMap GetMember(string columnName)
-    {
-        var propertyName = ColumnMappings.TryGetValue(columnName, out var mappedName)
-            ? mappedName
-            : columnName;
-
-        var property = _properties.FirstOrDefault(p =>
-            string.Equals(p.Name, propertyName, StringComparison.OrdinalIgnoreCase));
-
-        return property != null ? new YuehaiSettlementMemberMap(columnName, property) : null!;
-    }
-}
-
-/// <summary>
-/// 简单的成员映射实现
-/// </summary>
-internal sealed class YuehaiSettlementMemberMap : SqlMapper.IMemberMap
-{
-    private readonly string _columnName;
-    private readonly PropertyInfo? _property;
-    private readonly ParameterInfo? _parameter;
-
-    public YuehaiSettlementMemberMap(string columnName, PropertyInfo property)
-    {
-        _columnName = columnName;
-        _property = property;
-    }
-
-    public YuehaiSettlementMemberMap(string columnName, ParameterInfo parameter)
-    {
-        _columnName = columnName;
-        _parameter = parameter;
-    }
-
-    public string ColumnName => _columnName;
-    public PropertyInfo? Property => _property;
-    public FieldInfo? Field => null;
-    public ParameterInfo? Parameter => _parameter;
-    public Type Type => _property?.PropertyType ?? _parameter!.ParameterType;
-    public Type MemberType => _property?.PropertyType ?? _parameter!.ParameterType;
 }

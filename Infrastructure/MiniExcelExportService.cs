@@ -58,7 +58,7 @@ public sealed class MiniExcelExportService : IExcelExportService
 
         // 将 AuditedResult 集合转换为 Excel 行模型集合
         // MiniExcel 通过特性标注（ExcelColumnName）将属性名映射到中文列名
-        var excelRows = data.Select(MapToExcelRow);
+        var excelRows = data.Select(MapToExcelRow).ToList();
 
         // 获取系统临时文件夹路径
         // Windows: %TEMP% (通常为 C:\Users\{用户名}\AppData\Local\Temp)
@@ -151,6 +151,316 @@ public sealed class MiniExcelExportService : IExcelExportService
             DocumentCategory = result.DocumentCategory,
             ListCode = result.ListCode,
         };
+    }
+
+    /// <inheritdoc />
+    public async Task<string> ExportYuehaiSettlementsToExcelAsync(
+        IEnumerable<YuehaiSettlement> data,
+        string? sheetName = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(data);
+
+        var sheet = sheetName ?? "YueHai结算数据";
+        _logger.LogInformation("开始导出YueHai结算数据到 Excel，工作表: {SheetName}", sheet);
+
+        var excelRows = data.Select(MapToExcelRow).ToList();
+
+        var tempFolder = Path.GetTempPath();
+        var exportFolder = Path.Combine(tempFolder, ExportSubFolder);
+        Directory.CreateDirectory(exportFolder);
+
+        var timestamp = DateTime.Now.ToString("yyyyMMddHHmmss");
+        var randomSuffix = Path.GetRandomFileName().Replace(".", "");
+        var fileName = $"YuehaiSettlementExport_{timestamp}_{randomSuffix}.xlsx";
+        var filePath = Path.Combine(exportFolder, fileName);
+
+        await MiniExcel.SaveAsAsync(filePath, excelRows, sheetName: sheet, cancellationToken: cancellationToken);
+
+        var fileInfo = new FileInfo(filePath);
+        var fileSizeKB = fileInfo.Length / 1024.0;
+
+        _logger.LogInformation(
+            "YueHai结算数据 Excel 导出完成，文件路径: {FilePath}，文件大小: {FileSizeKB:F1} KB，数据行数: {RowCount}",
+            filePath, fileSizeKB, excelRows.Count);
+
+        return filePath;
+    }
+
+    /// <summary>
+    /// 将 YuehaiSettlement 实体映射为 Excel 行模型
+    /// </summary>
+    private static YuehaiSettlementExcelRow MapToExcelRow(YuehaiSettlement settlement)
+    {
+        return new YuehaiSettlementExcelRow
+        {
+            VisitId = settlement.VisitId,
+            SettlementId = settlement.SettlementId,
+            AccountingSerialNo = settlement.AccountingSerialNo,
+            ValidFlag = settlement.ValidFlag,
+            PrescriptionOrderNo = settlement.PrescriptionOrderNo,
+            InstitutionCode = settlement.InstitutionCode,
+            InstitutionName = settlement.InstitutionName,
+            PersonnelNo = settlement.PersonnelNo,
+            PersonnelName = settlement.PersonnelName,
+            IDType = settlement.IDType,
+            IDNumber = settlement.IDNumber,
+            Age = settlement.Age,
+            MedicalRecordNo = settlement.MedicalRecordNo,
+            InpatientOutpatientNo = settlement.InpatientOutpatientNo,
+            HospitalDays = settlement.HospitalDays,
+            StartDate = settlement.StartDate,
+            EndDate = settlement.EndDate,
+            SettlementTime = settlement.SettlementTime,
+            PrimaryDiagnosisName = settlement.PrimaryDiagnosisName,
+            AdmissionDeptName = settlement.AdmissionDeptName,
+            DischargeDeptName = settlement.DischargeDeptName,
+            InsuranceRelationId = settlement.InsuranceRelationId,
+            InsuranceRegion = settlement.InsuranceRegion,
+            InsuranceType1 = settlement.InsuranceType1,
+            InsuType = settlement.InsuType,
+            PaymentLocationType1 = settlement.PaymentLocationType1,
+            PaymentLocationType = settlement.PaymentLocationType,
+            MedicalCategory1 = settlement.MedicalCategory1,
+            MedicalCategory = settlement.MedicalCategory,
+            EntryMode = settlement.EntryMode,
+            DataSplit = settlement.DataSplit,
+            FeeDetailSerialNo = settlement.FeeDetailSerialNo,
+            FeeOccurrenceTime = settlement.FeeOccurrenceTime,
+            Quantity = settlement.Quantity,
+            UnitPrice = settlement.UnitPrice,
+            FeeDetailTotalAmount = settlement.FeeDetailTotalAmount,
+            PricingCapAmount = settlement.PricingCapAmount,
+            SelfPayRatio = settlement.SelfPayRatio,
+            PrePaymentType = settlement.PrePaymentType,
+            FullSelfPayAmount = settlement.FullSelfPayAmount,
+            OverLimitAmount = settlement.OverLimitAmount,
+            AdvanceSelfPayAmount = settlement.AdvanceSelfPayAmount,
+            InScopeAmount = settlement.InScopeAmount,
+            CivilServantBedAmount = settlement.CivilServantBedAmount,
+            HospitalDiscountAmount = settlement.HospitalDiscountAmount,
+            HospitalAdvanceAmount = settlement.HospitalAdvanceAmount,
+            ChargeItemLevel = settlement.ChargeItemLevel,
+            InsuranceCatalogCode = settlement.InsuranceCatalogCode,
+            InsuranceCatalogName = settlement.InsuranceCatalogName,
+            CatalogCategory = settlement.CatalogCategory,
+            MedicalCatalogCode = settlement.MedicalCatalogCode,
+            InstitutionCatalogCode = settlement.InstitutionCatalogCode,
+            InstitutionCatalogName = settlement.InstitutionCatalogName,
+            MedicalChargeCategory1 = settlement.MedicalChargeCategory1,
+            MedicalChargeCategory = settlement.MedicalChargeCategory,
+            Specification = settlement.Specification,
+            DosageFormName = settlement.DosageFormName,
+            OrderingDeptCode = settlement.OrderingDeptCode,
+            OrderingDeptName = settlement.OrderingDeptName,
+            OrderingDoctorCode = settlement.OrderingDoctorCode,
+            OrderingDoctorName = settlement.OrderingDoctorName,
+            ReceivingDeptCode = settlement.ReceivingDeptCode,
+            ReceivingDeptName = settlement.ReceivingDeptName,
+            ReceivingDoctorCode = settlement.ReceivingDoctorCode,
+            ReceivingDoctorName = settlement.ReceivingDoctorName,
+        };
+    }
+
+    /// <summary>
+    /// YueHai结算数据 Excel 行模型
+    /// </summary>
+    private sealed class YuehaiSettlementExcelRow
+    {
+        [ExcelColumnName("就诊ID")]
+        public string? VisitId { get; set; }
+
+        [ExcelColumnName("结算ID")]
+        public string? SettlementId { get; set; }
+
+        [ExcelColumnName("记账流水号")]
+        public string? AccountingSerialNo { get; set; }
+
+        [ExcelColumnName("有效标志")]
+        public string? ValidFlag { get; set; }
+
+        [ExcelColumnName("处方医嘱号")]
+        public string? PrescriptionOrderNo { get; set; }
+
+        [ExcelColumnName("定点医药机构编号")]
+        public string? InstitutionCode { get; set; }
+
+        [ExcelColumnName("定点医药机构名称")]
+        public string? InstitutionName { get; set; }
+
+        [ExcelColumnName("人员编号")]
+        public string? PersonnelNo { get; set; }
+
+        [ExcelColumnName("人员姓名")]
+        public string? PersonnelName { get; set; }
+
+        [ExcelColumnName("人员证件类型")]
+        public string? IDType { get; set; }
+
+        [ExcelColumnName("证件号码")]
+        public string? IDNumber { get; set; }
+
+        [ExcelColumnName("年龄")]
+        public decimal? Age { get; set; }
+
+        [ExcelColumnName("病历号")]
+        public string? MedicalRecordNo { get; set; }
+
+        [ExcelColumnName("住院_门诊号")]
+        public string? InpatientOutpatientNo { get; set; }
+
+        [ExcelColumnName("住院天数")]
+        public decimal? HospitalDays { get; set; }
+
+        [ExcelColumnName("开始日期")]
+        public string? StartDate { get; set; }
+
+        [ExcelColumnName("结束日期")]
+        public string? EndDate { get; set; }
+
+        [ExcelColumnName("结算时间")]
+        public string? SettlementTime { get; set; }
+
+        [ExcelColumnName("住院主诊断名称")]
+        public string? PrimaryDiagnosisName { get; set; }
+
+        [ExcelColumnName("入院科室名称")]
+        public string? AdmissionDeptName { get; set; }
+
+        [ExcelColumnName("出院科室名称")]
+        public string? DischargeDeptName { get; set; }
+
+        [ExcelColumnName("人员参保关系ID")]
+        public string? InsuranceRelationId { get; set; }
+
+        [ExcelColumnName("参保所属医保区划")]
+        public string? InsuranceRegion { get; set; }
+
+        [ExcelColumnName("险种类型1")]
+        public string? InsuranceType1 { get; set; }
+
+        [ExcelColumnName("INSUTYPE")]
+        public string? InsuType { get; set; }
+
+        [ExcelColumnName("支付地点类别1")]
+        public string? PaymentLocationType1 { get; set; }
+
+        [ExcelColumnName("支付地点类别")]
+        public string? PaymentLocationType { get; set; }
+
+        [ExcelColumnName("医疗类别1")]
+        public string? MedicalCategory1 { get; set; }
+
+        [ExcelColumnName("医疗类别")]
+        public string? MedicalCategory { get; set; }
+
+        [ExcelColumnName("录入方式")]
+        public string? EntryMode { get; set; }
+
+        [ExcelColumnName("数据分割")]
+        public string? DataSplit { get; set; }
+
+        [ExcelColumnName("费用明细流水号")]
+        public string? FeeDetailSerialNo { get; set; }
+
+        [ExcelColumnName("费用发生时间")]
+        public string? FeeOccurrenceTime { get; set; }
+
+        [ExcelColumnName("数量")]
+        public decimal? Quantity { get; set; }
+
+        [ExcelColumnName("单价")]
+        public decimal? UnitPrice { get; set; }
+
+        [ExcelColumnName("明细项目费用总额")]
+        public decimal? FeeDetailTotalAmount { get; set; }
+
+        [ExcelColumnName("定价上限金额")]
+        public decimal? PricingCapAmount { get; set; }
+
+        [ExcelColumnName("自付比例")]
+        public decimal? SelfPayRatio { get; set; }
+
+        [ExcelColumnName("先支付类型")]
+        public string? PrePaymentType { get; set; }
+
+        [ExcelColumnName("全自费金额")]
+        public decimal? FullSelfPayAmount { get; set; }
+
+        [ExcelColumnName("超限价金额")]
+        public decimal? OverLimitAmount { get; set; }
+
+        [ExcelColumnName("先行自付金额")]
+        public decimal? AdvanceSelfPayAmount { get; set; }
+
+        [ExcelColumnName("符合范围金额")]
+        public decimal? InScopeAmount { get; set; }
+
+        [ExcelColumnName("公务员床位费金额")]
+        public decimal? CivilServantBedAmount { get; set; }
+
+        [ExcelColumnName("医院减免金额")]
+        public decimal? HospitalDiscountAmount { get; set; }
+
+        [ExcelColumnName("医院垫付金额")]
+        public decimal? HospitalAdvanceAmount { get; set; }
+
+        [ExcelColumnName("收费项目等级")]
+        public string? ChargeItemLevel { get; set; }
+
+        [ExcelColumnName("医保目录编码")]
+        public string? InsuranceCatalogCode { get; set; }
+
+        [ExcelColumnName("医保目录名称")]
+        public string? InsuranceCatalogName { get; set; }
+
+        [ExcelColumnName("目录类别")]
+        public string? CatalogCategory { get; set; }
+
+        [ExcelColumnName("医疗目录编码")]
+        public string? MedicalCatalogCode { get; set; }
+
+        [ExcelColumnName("医药机构目录编码")]
+        public string? InstitutionCatalogCode { get; set; }
+
+        [ExcelColumnName("医药机构目录名称")]
+        public string? InstitutionCatalogName { get; set; }
+
+        [ExcelColumnName("医疗收费项目类别1")]
+        public string? MedicalChargeCategory1 { get; set; }
+
+        [ExcelColumnName("医疗收费项目类别")]
+        public string? MedicalChargeCategory { get; set; }
+
+        [ExcelColumnName("规格")]
+        public string? Specification { get; set; }
+
+        [ExcelColumnName("剂型名称")]
+        public string? DosageFormName { get; set; }
+
+        [ExcelColumnName("开单科室编码")]
+        public string? OrderingDeptCode { get; set; }
+
+        [ExcelColumnName("开单科室名称")]
+        public string? OrderingDeptName { get; set; }
+
+        [ExcelColumnName("开单医师代码")]
+        public string? OrderingDoctorCode { get; set; }
+
+        [ExcelColumnName("开单医师姓名")]
+        public string? OrderingDoctorName { get; set; }
+
+        [ExcelColumnName("受单科室编码")]
+        public string? ReceivingDeptCode { get; set; }
+
+        [ExcelColumnName("受单科室名称")]
+        public string? ReceivingDeptName { get; set; }
+
+        [ExcelColumnName("受单医师代码")]
+        public string? ReceivingDoctorCode { get; set; }
+
+        [ExcelColumnName("受单医师姓名")]
+        public string? ReceivingDoctorName { get; set; }
     }
 
     /// <summary>

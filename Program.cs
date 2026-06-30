@@ -35,14 +35,14 @@ builder.Logging.AddSerilog(Log.Logger);
 builder.Services
     .AddMcpServer()
     .WithStdioServerTransport()
-    .WithTools<RandomNumberTools>()
+    //.WithTools<RandomNumberTools>()
     .WithTools<AuditServerTools>()
     .WithTools<YuehaiSettlementTools>();
 
 // 注册审核数据访问服务（连接字符串通过环境变量 ORACLE_CONNECTION_STRING 延迟读取）
 builder.Services.AddOracleDataAccess("ORACLE_CONNECTION_STRING");
 
-// 注册粤海医保结算数据访问服务（连接字符串通过环境变量 YUEHAI_SETTLEMENT_ORACLE_CONNECTION_STRING 延迟读取）
+// 注册YueHai医保结算数据访问服务（连接字符串通过环境变量 YUEHAI_SETTLEMENT_ORACLE_CONNECTION_STRING 延迟读取）
 builder.Services.AddYuehaiSettlementDataAccess("YUEHAI_SETTLEMENT_ORACLE_CONNECTION_STRING");
 
 // 注册 Excel 导出服务
@@ -55,3 +55,4 @@ builder.Services.AddExcelExport();
 // Build() 构建完整的 DI 容器和 Host
 // RunAsync() 启动 Host 并开始处理 MCP 请求（阻塞直到应用停止）
 await builder.Build().RunAsync();
+Log.CloseAndFlush();

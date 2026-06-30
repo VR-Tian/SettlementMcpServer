@@ -60,16 +60,16 @@ public sealed class OracleAuditDataRepository : IAuditDataRepository
     /// </summary>
     private const int QueryTimeoutSeconds = 30;
 
-    private readonly IDbConnectionFactory _connectionFactory;
+    private readonly IAuditDbConnectionFactory _connectionFactory;
     private readonly ILogger<OracleAuditDataRepository> _logger;
 
     /// <summary>
     /// 初始化仓储实例
     /// </summary>
-    /// <param name="connectionFactory">数据库连接工厂（由 DI 注入）</param>
+    /// <param name="connectionFactory">审核数据库连接工厂（由 DI 注入）</param>
     /// <param name="logger">日志记录器（由 DI 注入，可选）</param>
     public OracleAuditDataRepository(
-        IDbConnectionFactory connectionFactory,
+        IAuditDbConnectionFactory connectionFactory,
         ILogger<OracleAuditDataRepository>? logger = null)
     {
         _connectionFactory = connectionFactory ?? throw new System.ArgumentNullException(nameof(connectionFactory));
@@ -109,6 +109,8 @@ public sealed class OracleAuditDataRepository : IAuditDataRepository
         // 通过工厂创建连接（内部使用连接池复用物理连接）
         using var connection = _connectionFactory.CreateConnection();
 
+
+
         // 构建 Dapper 命令定义（包含超时和取消令牌）
         var commandDefinition = new CommandDefinition(
             commandText: sql,
@@ -116,13 +118,13 @@ public sealed class OracleAuditDataRepository : IAuditDataRepository
             commandTimeout: QueryTimeoutSeconds,
             cancellationToken: cancellationToken);
 
-        _logger.LogTrace("执行审核数据分页查询: Page={Page}, PageSize={PageSize}, StartRow={StartRow}, EndRow={EndRow}, Sql={Sql}",
+        _logger.LogDebug("执行审核数据分页查询: Page={Page}, PageSize={PageSize}, StartRow={StartRow}, EndRow={EndRow}, Sql={Sql}",
             page, pageSize, startRow, endRow, sql);
 
         var results = await connection.QueryAsync<AuditedResult>(commandDefinition);
         var resultList = results.ToList();
 
-        _logger.LogTrace("审核数据分页查询完成，返回 {Count} 条记录", resultList.Count);
+        _logger.LogDebug("审核数据分页查询完成，返回 {Count} 条记录", resultList.Count);
 
         return resultList;
     }
@@ -151,12 +153,12 @@ public sealed class OracleAuditDataRepository : IAuditDataRepository
             commandTimeout: QueryTimeoutSeconds,
             cancellationToken: cancellationToken);
 
-        _logger.LogTrace("执行审核数据计数查询: Sql={Sql}", sql);
+        _logger.LogDebug("执行审核数据计数查询: Sql={Sql}", sql);
 
         // ExecuteScalarAsync 返回结果集第一行第一列的值
         var totalCount = await connection.ExecuteScalarAsync<int>(commandDefinition);
 
-        _logger.LogTrace("审核数据计数查询完成，总计 {Count} 条记录", totalCount);
+        _logger.LogDebug("审核数据计数查询完成，总计 {Count} 条记录", totalCount);
 
         return totalCount;
     }
@@ -185,12 +187,9 @@ public sealed class OracleAuditDataRepository : IAuditDataRepository
         var parameters = new DynamicParameters();
 
         // 构建 WHERE 过滤条件
-        AddCondition(filter.MedicalRecordNo, "病案号", "medicalRecordNo", conditions, parameters);
-        AddCondition(filter.HospitalCode, "医院编码", "hospitalCode", conditions, parameters);
-        AddCondition(filter.InsuredNo, "参保人号", "insuredNo", conditions, parameters);
-        AddCondition(filter.RuleCode, "规则编码", "ruleCode", conditions, parameters);
+        AddCommonConditions(filter, conditions, parameters);
 
-        var whereClause = conditions.Count > 0 ? "WHERE " + string.Join(" AND ", conditions) : string.Empty;
+        var whereClause = SqlWhereBuilder.BuildWhereClause(conditions);
 
         var sql = $"""
             SELECT * FROM (
@@ -229,12 +228,14 @@ public sealed class OracleAuditDataRepository : IAuditDataRepository
             commandTimeout: QueryTimeoutSeconds,
             cancellationToken: cancellationToken);
 
-        _logger.LogTrace("执行审核数据全量查询: Sql={Sql}", sql);
+        _logger.LogDebug("执行审核数据源地址: {DataSource}", connection.ConnectionString);
+
+        _logger.LogDebug("执行审核数据全量查询: Sql={Sql}", sql);
 
         var results = await connection.QueryAsync<AuditedResult>(commandDefinition);
         var resultList = results.ToList();
 
-        _logger.LogTrace("审核数据全量查询完成，返回 {Count} 条记录", resultList.Count);
+        _logger.LogDebug("审核数据全量查询完成，返回 {Count} 条记录", resultList.Count);
 
         return resultList;
     }
@@ -250,12 +251,9 @@ public sealed class OracleAuditDataRepository : IAuditDataRepository
         var parameters = new DynamicParameters();
 
         // 构建 WHERE 过滤条件
-        AddCondition(filter.MedicalRecordNo, "病案号", "medicalRecordNo", conditions, parameters);
-        AddCondition(filter.HospitalCode, "医院编码", "hospitalCode", conditions, parameters);
-        AddCondition(filter.InsuredNo, "参保人号", "insuredNo", conditions, parameters);
-        AddCondition(filter.RuleCode, "规则编码", "ruleCode", conditions, parameters);
+        AddCommonConditions(filter, conditions, parameters);
 
-        var whereClause = conditions.Count > 0 ? "WHERE " + string.Join(" AND ", conditions) : string.Empty;
+        var whereClause = SqlWhereBuilder.BuildWhereClause(conditions);
 
         var sql = $"SELECT * FROM {TableName} {whereClause}";
 
@@ -273,12 +271,9 @@ public sealed class OracleAuditDataRepository : IAuditDataRepository
         var parameters = new DynamicParameters();
 
         // 构建 WHERE 过滤条件（与分页查询相同）
-        AddCondition(filter.MedicalRecordNo, "病案号", "medicalRecordNo", conditions, parameters);
-        AddCondition(filter.HospitalCode, "医院编码", "hospitalCode", conditions, parameters);
-        AddCondition(filter.InsuredNo, "参保人号", "insuredNo", conditions, parameters);
-        AddCondition(filter.RuleCode, "规则编码", "ruleCode", conditions, parameters);
+        AddCommonConditions(filter, conditions, parameters);
 
-        var whereClause = conditions.Count > 0 ? "WHERE " + string.Join(" AND ", conditions) : string.Empty;
+        var whereClause = SqlWhereBuilder.BuildWhereClause(conditions);
 
         var sql = $"SELECT COUNT(*) FROM {TableName} {whereClause}";
 
@@ -286,24 +281,19 @@ public sealed class OracleAuditDataRepository : IAuditDataRepository
     }
 
     /// <summary>
-    /// 向 WHERE 条件列表和参数集合添加一个可选过滤条件
+    /// 添加通用过滤条件（病案号、医院编码、参保人号、规则编码）
     /// </summary>
-    /// <param name="value">过滤值，为 null 或空白时忽略此条件</param>
-    /// <param name="columnName">Oracle 表中的列名（中文）</param>
-    /// <param name="paramName">SQL 参数名（英文，用于 :paramName 占位符）</param>
-    /// <param name="conditions">WHERE 条件集合，方法会向其中添加条件表达式</param>
-    /// <param name="parameters">Dapper 动态参数集合，方法会向其中添加参数</param>
-    private static void AddCondition(
-        string? value,
-        string columnName,
-        string paramName,
+    /// <param name="filter">查询条件过滤器</param>
+    /// <param name="conditions">WHERE 条件集合</param>
+    /// <param name="parameters">Dapper 动态参数集合</param>
+    private static void AddCommonConditions(
+        AuditedResultQueryFilter filter,
         List<string> conditions,
         DynamicParameters parameters)
     {
-        if (!string.IsNullOrWhiteSpace(value))
-        {
-            conditions.Add($"{columnName} = :{paramName}");
-            parameters.Add(paramName, value);
-        }
+        SqlWhereBuilder.AddCondition(filter.MedicalRecordNo, "病案号", "medicalRecordNo", conditions, parameters);
+        SqlWhereBuilder.AddCondition(filter.HospitalCode, "医院编码", "hospitalCode", conditions, parameters);
+        SqlWhereBuilder.AddCondition(filter.InsuredNo, "参保人号", "insuredNo", conditions, parameters);
+        SqlWhereBuilder.AddCondition(filter.RuleCode, "规则编码", "ruleCode", conditions, parameters);
     }
 }

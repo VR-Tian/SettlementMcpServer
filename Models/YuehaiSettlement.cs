@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 namespace SettlementMcpServer.Models;
 
 /// <summary>
-/// 粤海医保结算数据查询条件
+/// YueHai医保结算数据查询条件
 /// </summary>
 public class YuehaiSettlementQueryFilter
 {
@@ -14,10 +14,51 @@ public class YuehaiSettlementQueryFilter
     public string? InpatientOutpatientNo { get; set; }
     public string? InsuranceType { get; set; }
     public string? MedicalCategory { get; set; }
+
+    /// <summary>
+    /// 页码（从 1 开始，默认 1）
+    /// </summary>
+    public int Page { get; set; } = 1;
+
+    /// <summary>
+    /// 每页条数（默认 100）
+    /// </summary>
+    public int PageSize { get; set; } = 100;
 }
 
 /// <summary>
-/// 粤海医保结算数据结果 - 对应表 YB_粤海医保结算全量数据
+/// YueHai医保结算数据分页元数据
+/// </summary>
+public class YuehaiSettlementPagination
+{
+    /// <summary>
+    /// 总记录数
+    /// </summary>
+    public int TotalCount { get; set; }
+
+    /// <summary>
+    /// 每页条数
+    /// </summary>
+    public int PageSize { get; set; }
+
+    /// <summary>
+    /// 总页数
+    /// </summary>
+    public int TotalPages => PageSize > 0 ? (TotalCount + PageSize - 1) / PageSize : 0;
+
+    /// <summary>
+    /// 当前页码
+    /// </summary>
+    public int CurrentPage { get; set; }
+
+    /// <summary>
+    /// 是否有下一页
+    /// </summary>
+    public bool HasNextPage => CurrentPage < TotalPages;
+}
+
+/// <summary>
+/// YueHai医保结算数据结果 - 对应表 YB_YueHai医保结算全量数据
 /// </summary>
 public class YuehaiSettlement
 {

@@ -4,9 +4,15 @@ using SettlementMcpServer.Contracts;
 namespace SettlementMcpServer.Infrastructure;
 
 /// <summary>
-/// Oracle 数据库连接工厂实现
+/// 审核数据数据库连接工厂实现
 /// </summary>
-public sealed class OracleDbConnectionFactory : IDbConnectionFactory
+/// <remarks>
+/// <para>
+/// 实现 <see cref="IAuditDbConnectionFactory"/> 接口，用于创建审核数据专用的数据库连接。
+/// 当系统中存在多个数据源时，通过不同的连接工厂类型避免 DI 注册覆盖问题。
+/// </para>
+/// </remarks>
+public sealed class AuditDbConnectionFactory : IAuditDbConnectionFactory
 {
     private readonly string? _connectionString;
     private readonly string? _environmentVariableName;
@@ -14,7 +20,7 @@ public sealed class OracleDbConnectionFactory : IDbConnectionFactory
     /// <summary>
     /// 方式 1：直接传入连接字符串（适用于启动时已确定的情况）
     /// </summary>
-    public OracleDbConnectionFactory(string connectionString)
+    public AuditDbConnectionFactory(string connectionString)
     {
         _connectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
     }
@@ -22,7 +28,7 @@ public sealed class OracleDbConnectionFactory : IDbConnectionFactory
     /// <summary>
     /// 方式 2：传入环境变量名，每次创建连接时动态读取（支持运行时修改配置）
     /// </summary>
-    public OracleDbConnectionFactory(string environmentVariableName, bool fromEnvironment)
+    public AuditDbConnectionFactory(string environmentVariableName, bool fromEnvironment)
     {
         _environmentVariableName = environmentVariableName ?? throw new ArgumentNullException(nameof(environmentVariableName));
     }
@@ -36,7 +42,7 @@ public sealed class OracleDbConnectionFactory : IDbConnectionFactory
 
         if (string.IsNullOrEmpty(connectionString))
         {
-            throw new InvalidOperationException($"未配置数据库连接字符串，请设置环境变量 {_environmentVariableName}");
+            throw new InvalidOperationException($"未配置审核数据库连接字符串，请设置环境变量 {_environmentVariableName}");
         }
 
         return new OracleConnection(connectionString);

@@ -43,4 +43,16 @@ public interface IExcelExportService
         IEnumerable<AuditedResult> data,
         string? sheetName = null,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 将YueHai结算数据集合导出为 Excel 文件并保存到本机临时文件夹
+    /// </summary>
+    /// <param name="data">YueHai结算数据集合</param>
+    /// <param name="sheetName">工作表名称（默认 "YueHai结算数据"）</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>保存的 Excel 文件完整路径</returns>
+    Task<string> ExportYuehaiSettlementsToExcelAsync(
+        IEnumerable<YuehaiSettlement> data,
+        string? sheetName = null,
+        CancellationToken cancellationToken = default);
 }
