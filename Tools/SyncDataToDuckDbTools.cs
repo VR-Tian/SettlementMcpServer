@@ -48,13 +48,13 @@ internal class SyncDataToDuckDbTools
     }
 
     /// <summary>
-    /// 同步医保结算结算数据到 DuckDB
+    /// 同步医保结算数据据到 DuckDB
     /// </summary>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>同步结果，包含记录数和文件路径</returns>
     /// <remarks>
     /// <para>
-    /// 此方法将 Oracle 中的医保结算结算数据导出为 Parquet 文件，并在 DuckDB 中注册为
+    /// 此方法将 Oracle 中的医保结算数据据导出为 Parquet 文件，并在 DuckDB 中注册为
     /// <c>yuehai_settlements</c> 视图，供后续分析查询使用。
     /// </para>
     /// <para>
@@ -67,16 +67,16 @@ internal class SyncDataToDuckDbTools
     /// </para>
     /// </remarks>
     [McpServerTool]
-    [Description("同步医保结算结算数据到 DuckDB，将数据导出为 Parquet 文件并注册为可查询视图")]
+    [Description("同步医保结算数据据到 DuckDB，将数据导出为 Parquet 文件并注册为可查询视图")]
     public async Task<DataSyncResult> SyncYuehaiSettlementDataAsync(
         CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("开始同步医保结算结算数据到 DuckDB");
+        _logger.LogInformation("开始同步医保结算数据据到 DuckDB");
 
         var result = await _dataSyncService.SyncYuehaiSettlementsAsync(cancellationToken);
 
         _logger.LogInformation(
-            "医保结算结算数据同步完成，同步 {Count} 条记录，文件路径: {FilePath}",
+            "医保结算数据据同步完成，同步 {Count} 条记录，文件路径: {FilePath}",
             result.RecordCount, result.FilePath);
 
         return result;

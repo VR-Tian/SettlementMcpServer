@@ -23,7 +23,7 @@
 
 **当前接口：**
 - `IAuditDataRepository` - 审核数据仓储接口
-- `IYuehaiSettlementDataRepository` - 医保结算结算数据仓储接口
+- `IYuehaiSettlementDataRepository` - 医保结算数据据仓储接口
 - `IExcelExportService` - Excel 导出服务接口
 - `IDbConnectionFactory` - 数据库连接工厂接口
 - `IPagedQuery` - 分页查询参数接口
@@ -70,7 +70,7 @@ public interface IYuehaiSettlementDataRepository : IRepository<YuehaiSettlement,
 **当前实现：**
 - `OracleRepositoryBase<T>` - 泛型仓储基类
 - `OracleAuditDataRepository` - 审核数据仓储实现
-- `OracleYuehaiSettlementDataRepository` - 医保结算结算数据仓储实现
+- `OracleYuehaiSettlementDataRepository` - 医保结算数据据仓储实现
 - `OracleDbConnectionFactory` - Oracle 连接工厂实现
 - `SqlWhereBuilder` - SQL WHERE 条件构建辅助类
 - `DapperTypeMapBase` - Dapper 类型映射基类
@@ -137,7 +137,7 @@ public interface IYuehaiSettlementDataRepository : IRepository<YuehaiSettlement,
 
 **当前模型：**
 - `AuditedResult` / `AuditedResultQueryFilter` - 审核数据模型和查询过滤器
-- `YuehaiSettlement` / `YuehaiSettlementQueryFilter` - 医保结算结算数据模型和查询过滤器
+- `YuehaiSettlement` / `YuehaiSettlementQueryFilter` - 医保结算数据据模型和查询过滤器
 - `PaginationMetadata` - 通用分页元数据
 
 **优点：**
@@ -189,7 +189,7 @@ public interface IYuehaiSettlementDataRepository : IRepository<YuehaiSettlement,
 
 **当前工具类：**
 - `AuditServerTools` - 审核数据工具类
-- `YuehaiSettlementTools` - 医保结算结算数据工具类
+- `YuehaiSettlementTools` - 医保结算数据据工具类
 - `RandomNumberTools` - 随机数工具类
 
 **优点：**

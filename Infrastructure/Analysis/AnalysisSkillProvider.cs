@@ -23,7 +23,7 @@ public sealed class AnalysisSkillProvider : IAnalysisSkillProvider
     {
         _dimensions = new List<AnalysisDimension>
         {
-            // 医保结算结算数据分析维度
+            // 医保结算数据据分析维度
             new()
             {
                 Name = "hospital_settlement_summary",

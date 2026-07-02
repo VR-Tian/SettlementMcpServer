@@ -32,7 +32,7 @@ public sealed class ParquetDataSyncService : IDataSyncService
     /// <summary>
     /// 初始化数据同步服务
     /// </summary>
-    /// <param name="yuehaiRepository">医保结算结算数据仓储</param>
+    /// <param name="yuehaiRepository">医保结算数据据仓储</param>
     /// <param name="auditRepository">审核数据仓储</param>
     /// <param name="duckDbConnectionFactory">DuckDB 连接工厂</param>
     /// <param name="logger">日志记录器</param>
@@ -55,13 +55,13 @@ public sealed class ParquetDataSyncService : IDataSyncService
     /// <inheritdoc />
     public async Task<DataSyncResult> SyncYuehaiSettlementsAsync(CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("开始同步医保结算结算数据到 DuckDB");
+        _logger.LogInformation("开始同步医保结算数据据到 DuckDB");
 
         // 从 Oracle 读取全部数据
         var filter = new YuehaiSettlementQueryFilter();
         var allData = await _yuehaiRepository.QueryAllSettlementsAsync(filter, cancellationToken);
 
-        _logger.LogInformation("从 Oracle 读取到 {Count} 条医保结算结算数据", allData.Count);
+        _logger.LogInformation("从 Oracle 读取到 {Count} 条医保结算数据据", allData.Count);
 
         // 生成 Parquet 文件路径
         var fileName = $"yuehai_settlements_{DateTime.Now:yyyyMMddHHmmss}.parquet";
@@ -70,12 +70,12 @@ public sealed class ParquetDataSyncService : IDataSyncService
         // 写入 Parquet 文件
         await WriteYuehaiSettlementsToParquetAsync(allData, filePath, cancellationToken);
 
-        _logger.LogInformation("医保结算结算数据已写入 Parquet 文件: {FilePath}", filePath);
+        _logger.LogInformation("医保结算数据据已写入 Parquet 文件: {FilePath}", filePath);
 
         // 在 DuckDB 中注册视图
         await RegisterParquetViewInDuckDbAsync("yuehai_settlements", filePath, cancellationToken);
 
-        _logger.LogInformation("医保结算结算数据同步完成");
+        _logger.LogInformation("医保结算数据据同步完成");
 
         return new DataSyncResult
         {
@@ -121,7 +121,7 @@ public sealed class ParquetDataSyncService : IDataSyncService
     }
 
     /// <summary>
-    /// 将医保结算结算数据写入 Parquet 文件
+    /// 将医保结算数据据写入 Parquet 文件
     /// </summary>
     private async Task WriteYuehaiSettlementsToParquetAsync(
         IReadOnlyList<YuehaiSettlement> data,

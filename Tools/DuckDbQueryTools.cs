@@ -68,7 +68,7 @@ internal class DuckDbQueryTools
     /// <b>可用视图：</b>
     /// </para>
     /// <list type="bullet">
-    ///   <item><description><c>yuehai_settlements</c> - 医保结算结算数据视图</description></item>
+    ///   <item><description><c>yuehai_settlements</c> - 医保结算数据据视图</description></item>
     ///   <item><description><c>audited_results</c> - 审核数据视图</description></item>
     /// </list>
     /// <para>
