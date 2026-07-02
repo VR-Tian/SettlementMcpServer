@@ -55,19 +55,6 @@ internal class AuditServerTools
     }
 
     /// <summary>
-    /// 获取医保结算数据指定年份的审核数据金额统计结果
-    /// </summary>
-    /// <param name="year">统计年份，默认 2026</param>
-    /// <returns>统计金额（decimal 类型）</returns>
-    [McpServerTool]
-    [Description("获取医保结算数据指定年份的审核数据金额统计结果")]
-    public decimal GetAuditStatistics(
-        [Description("年份")] int year = 2026)
-    {
-        return DateTime.Now.Ticks / year;
-    }
-
-    /// <summary>
     /// 获取符合查询条件的总记录数和分页元数据
     /// </summary>
     /// <param name="medicalRecordNo">病案号（可选，精确匹配）</param>
@@ -101,7 +88,7 @@ internal class AuditServerTools
     /// </remarks>
     [McpServerTool]
     [Description("获取审核数据查询的总记录数和分页元数据，用于计算需要请求的页数")]
-    public async Task<AuditedResultPagination> GetAuditedResultCountAsync(
+    public async Task<PaginationMetadata> GetAuditedResultCountAsync(
         [Description("病案号（可选）")] string? medicalRecordNo = null,
         [Description("医院编码（可选）")] string? hospitalCode = null,
         [Description("参保人号（可选）")] string? insuredNo = null,
@@ -113,7 +100,7 @@ internal class AuditServerTools
 
         var totalCount = await _auditDataRepository.CountAuditedResultsAsync(filter, cancellationToken);
 
-        return new AuditedResultPagination
+        return new PaginationMetadata
         {
             TotalCount = totalCount,
             PageSize = pageSize,

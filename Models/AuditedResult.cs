@@ -1,3 +1,5 @@
+using SettlementMcpServer.Contracts;
+
 namespace SettlementMcpServer.Models;
 
 /// <summary>
@@ -7,7 +9,7 @@ namespace SettlementMcpServer.Models;
 /// 用于封装 <see cref="AuditedResult"/> 查询的所有可选过滤参数。
 /// 所有字段均为可选，不传入时仓储层将忽略对应 WHERE 条件。
 /// </remarks>
-public class AuditedResultQueryFilter
+public class AuditedResultQueryFilter : IPagedQuery
 {
     /// <summary>病案号（对应表字段: 病案号）</summary>
     /// <remarks>精确匹配，为空时忽略此条件。</remarks>
@@ -42,64 +44,6 @@ public class AuditedResultQueryFilter
     /// 避免超出 MCP 上下文长度限制。
     /// </remarks>
     public int PageSize { get; set; } = 100;
-}
-
-/// <summary>
-/// 分页查询结果元数据
-/// </summary>
-/// <remarks>
-/// <para>
-/// 由步骤 1（<c>GetAuditedResultCountAsync</c>）返回，包含当前查询条件下的总记录数、
-/// 总页数、当前页码等信息，客户端据此计算需要循环请求的页数。
-/// </para>
-/// <para>
-/// <b>使用示例：</b>
-/// <code>
-/// // 步骤 1：获取总数
-/// var pagination = await GetAuditedResultCountAsync(hospitalCode: "H001");
-/// // pagination.TotalCount = 1250, pagination.TotalPages = 13 (pageSize=100)
-///
-/// // 步骤 2：循环请求每一页
-/// for (int page = 1; page &lt;= pagination.TotalPages; page++)
-/// {
-///     var results = await QueryAuditedResultsAsync(hospitalCode: "H001", page: page, pageSize: 100);
-///     // 处理 results...
-/// }
-/// </code>
-/// </para>
-/// </remarks>
-public record AuditedResultPagination
-{
-    /// <summary>
-    /// 符合查询条件的总记录数
-    /// </summary>
-    public int TotalCount { get; init; }
-
-    /// <summary>
-    /// 每页条数
-    /// </summary>
-    public int PageSize { get; init; }
-
-    /// <summary>
-    /// 总页数
-    /// </summary>
-    /// <remarks>计算公式: (TotalCount + PageSize - 1) / PageSize</remarks>
-    public int TotalPages => (TotalCount + PageSize - 1) / PageSize;
-
-    /// <summary>
-    /// 当前页码（用于确认请求的参数）
-    /// </summary>
-    public int CurrentPage { get; init; }
-
-    /// <summary>
-    /// 是否还有下一页
-    /// </summary>
-    public bool HasNextPage => CurrentPage < TotalPages;
-
-    /// <summary>
-    /// 是否还有上一页
-    /// </summary>
-    public bool HasPreviousPage => CurrentPage > 1;
 }
 
 /// <summary>

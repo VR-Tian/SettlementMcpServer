@@ -37,7 +37,10 @@ builder.Services
     .WithStdioServerTransport()
     //.WithTools<RandomNumberTools>()
     .WithTools<AuditServerTools>()
-    .WithTools<YuehaiSettlementTools>();
+    .WithTools<SyncDataToDuckDbTools>()
+    .WithTools<AnalysisDimensionTools>()
+    .WithTools<DuckDbQueryTools>();
+    //.WithTools<YuehaiSettlementTools>();
 
 // 注册审核数据访问服务（连接字符串通过环境变量 ORACLE_CONNECTION_STRING 延迟读取）
 builder.Services.AddOracleDataAccess("ORACLE_CONNECTION_STRING");
@@ -48,6 +51,9 @@ builder.Services.AddYuehaiSettlementDataAccess("YUEHAI_SETTLEMENT_ORACLE_CONNECT
 // 注册 Excel 导出服务
 // 此扩展方法内部注册了 IExcelExportService → MiniExcelExportService 映射
 builder.Services.AddExcelExport();
+
+// 注册 DuckDB 相关服务（连接工厂、数据同步、查询服务、分析维度）
+builder.Services.AddDuckDbServices();
 
 // ========================================
 // 启动运行

@@ -85,7 +85,7 @@ internal class YuehaiSettlementTools
     /// </remarks>
     [McpServerTool]
     [Description("获取YueHai结算数据查询的总记录数和分页元数据，用于计算需要请求的页数")]
-    public async Task<YuehaiSettlementPagination> GetSettlementCountAsync(
+    public async Task<PaginationMetadata> GetSettlementCountAsync(
         [Description("就诊ID（可选）")] string? visitId = null,
         [Description("结算ID（可选）")] string? settlementId = null,
         [Description("人员编号（可选）")] string? personnelNo = null,
@@ -100,7 +100,7 @@ internal class YuehaiSettlementTools
 
         var totalCount = await _repository.CountSettlementsAsync(filter, cancellationToken);
 
-        return new YuehaiSettlementPagination
+        return new PaginationMetadata
         {
             TotalCount = totalCount,
             PageSize = pageSize,

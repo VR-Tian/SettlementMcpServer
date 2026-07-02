@@ -1,11 +1,12 @@
 using System.Text.Json.Serialization;
+using SettlementMcpServer.Contracts;
 
 namespace SettlementMcpServer.Models;
 
 /// <summary>
 /// YueHai医保结算数据查询条件
 /// </summary>
-public class YuehaiSettlementQueryFilter
+public class YuehaiSettlementQueryFilter : IPagedQuery
 {
     public string? VisitId { get; set; }
     public string? SettlementId { get; set; }
@@ -24,37 +25,6 @@ public class YuehaiSettlementQueryFilter
     /// 每页条数（默认 100）
     /// </summary>
     public int PageSize { get; set; } = 100;
-}
-
-/// <summary>
-/// YueHai医保结算数据分页元数据
-/// </summary>
-public class YuehaiSettlementPagination
-{
-    /// <summary>
-    /// 总记录数
-    /// </summary>
-    public int TotalCount { get; set; }
-
-    /// <summary>
-    /// 每页条数
-    /// </summary>
-    public int PageSize { get; set; }
-
-    /// <summary>
-    /// 总页数
-    /// </summary>
-    public int TotalPages => PageSize > 0 ? (TotalCount + PageSize - 1) / PageSize : 0;
-
-    /// <summary>
-    /// 当前页码
-    /// </summary>
-    public int CurrentPage { get; set; }
-
-    /// <summary>
-    /// 是否有下一页
-    /// </summary>
-    public bool HasNextPage => CurrentPage < TotalPages;
 }
 
 /// <summary>

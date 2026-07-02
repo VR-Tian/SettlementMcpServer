@@ -34,10 +34,12 @@
 
   <ItemGroup>
     <PackageReference Include="Dapper" Version="2.1.79" />
+    <PackageReference Include="DuckDB.NET.Data.Full" Version="1.5.3" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
     <PackageReference Include="MiniExcel" Version="1.44.1" />
     <PackageReference Include="ModelContextProtocol" Version="1.2.0" />
     <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="23.26.200" />
+    <PackageReference Include="Parquet.Net" Version="5.2.0" />
     <PackageReference Include="Serilog" Version="4.2.0" />
     <PackageReference Include="Serilog.Extensions.Logging" Version="9.0.1" />
     <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
