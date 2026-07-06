@@ -55,10 +55,29 @@ builder.Services.AddExcelExport();
 // 注册 DuckDB 相关服务（连接工厂、数据同步、查询服务、分析维度）
 builder.Services.AddDuckDbServices();
 
+// 注册重复收费规则引擎服务（规则加载器、四种规则执行器、规则管道）
+builder.Services.AddRuleEngine();
+
 // ========================================
 // 启动运行
 // ========================================
 // Build() 构建完整的 DI 容器和 Host
+var app = builder.Build();
+
+// 初始化规则数据（从 Excel 扫描并写入 DuckDB）
+try
+{
+    using var scope = app.Services.CreateScope();
+    var initService = scope.ServiceProvider.GetRequiredService<SettlementMcpServer.Contracts.IRuleInitializationService>();
+    await initService.InitializeRulesAsync();
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "规则初始化失败，应用程序将退出");
+    await app.StopAsync();
+    return;
+}
+
 // RunAsync() 启动 Host 并开始处理 MCP 请求（阻塞直到应用停止）
-await builder.Build().RunAsync();
+await app.RunAsync();
 Log.CloseAndFlush();

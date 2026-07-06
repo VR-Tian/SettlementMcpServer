@@ -4,6 +4,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 using ModelContextProtocol.Server;
 using SettlementMcpServer.Contracts;
 using SettlementMcpServer.Models;
+using SettlementMcpServer.Models.Rules;
+using TaskStatus = SettlementMcpServer.Models.TaskStatus;
 
 namespace SettlementMcpServer.Tools;
 
@@ -36,6 +38,11 @@ internal class AuditServerTools
 {
     private readonly IAuditDataRepository _auditDataRepository;
     private readonly IExcelExportService _excelExportService;
+    private readonly IRulePipeline _rulePipeline;
+    private readonly IYuehaiSettlementDataRepository _yuehaiSettlementDataRepository;
+    private readonly IAuditTaskRepository _auditTaskRepository;
+    private readonly IRuleRepository _ruleRepository;
+    private readonly IAuditResultRepository _auditResultRepository;
     private readonly ILogger<AuditServerTools> _logger;
 
     /// <summary>
@@ -43,14 +50,29 @@ internal class AuditServerTools
     /// </summary>
     /// <param name="auditDataRepository">审核数据仓储（由 DI 容器自动注入）</param>
     /// <param name="excelExportService">Excel 导出服务（由 DI 容器自动注入）</param>
+    /// <param name="rulePipeline">规则管道（由 DI 容器自动注入）</param>
+    /// <param name="yuehaiSettlementDataRepository">YueHai 结算数据仓储（由 DI 容器自动注入）</param>
+    /// <param name="auditTaskRepository">审核任务仓储（由 DI 容器自动注入）</param>
+    /// <param name="ruleRepository">规则仓储（由 DI 容器自动注入）</param>
+    /// <param name="auditResultRepository">审核结果仓储（由 DI 容器自动注入）</param>
     /// <param name="logger">日志记录器（由 DI 容器自动注入，可选）</param>
     public AuditServerTools(
         IAuditDataRepository auditDataRepository,
         IExcelExportService excelExportService,
+        IRulePipeline rulePipeline,
+        IYuehaiSettlementDataRepository yuehaiSettlementDataRepository,
+        IAuditTaskRepository auditTaskRepository,
+        IRuleRepository ruleRepository,
+        IAuditResultRepository auditResultRepository,
         ILogger<AuditServerTools>? logger = null)
     {
         _auditDataRepository = auditDataRepository ?? throw new ArgumentNullException(nameof(auditDataRepository));
         _excelExportService = excelExportService ?? throw new ArgumentNullException(nameof(excelExportService));
+        _rulePipeline = rulePipeline ?? throw new ArgumentNullException(nameof(rulePipeline));
+        _yuehaiSettlementDataRepository = yuehaiSettlementDataRepository ?? throw new ArgumentNullException(nameof(yuehaiSettlementDataRepository));
+        _auditTaskRepository = auditTaskRepository ?? throw new ArgumentNullException(nameof(auditTaskRepository));
+        _ruleRepository = ruleRepository ?? throw new ArgumentNullException(nameof(ruleRepository));
+        _auditResultRepository = auditResultRepository ?? throw new ArgumentNullException(nameof(auditResultRepository));
         _logger = logger ?? NullLogger<AuditServerTools>.Instance;
     }
 
@@ -217,6 +239,268 @@ internal class AuditServerTools
 
         return await _excelExportService.ExportAuditedResultsToExcelAsync(allResults, sheetName, cancellationToken);
     }
+
+    #region  规则内涵执行审核服务
+
+    /// <summary>
+    /// 根据规则编码从数据库加载规则并审核医保数据，分析结果保存到本机临时文件夹并返回文件路径
+    /// </summary>
+    /// <param name="ruleCode">规则编码（必填，用于从数据库加载规则集）</param>
+    /// <param name="hospitalCode">医院编码（可选，按定点医药机构编号过滤结算数据）</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>导出的违规结果 Excel 文件完整路径；无违规或无数据时返回提示信息</returns>
+    /// <exception cref="ArgumentException">规则编码为空时抛出</exception>
+    /// <exception cref="InvalidOperationException">数据库中未找到对应规则时抛出</exception>
+    [McpServerTool]
+    [Description("根据规则编码从数据库加载规则审核医保数据，分析结果保存到本机临时文件夹并返回文件路径")]
+    public async Task<string> ExecAuditAnalysisAsync(
+        [Description("规则编码")] string? ruleCode = null,
+        [Description("医院编码（可选）")] string? hospitalCode = null,
+        CancellationToken cancellationToken = default)
+    {
+        // 1. 验证参数
+        if (string.IsNullOrWhiteSpace(ruleCode))
+        {
+            throw new ArgumentException("规则编码不能为空", nameof(ruleCode));
+        }
+
+        // 2. 从数据库加载规则
+        var ruleSet = await _ruleRepository.GetRuleSetByCodeAsync(ruleCode, cancellationToken);
+        if (ruleSet == null)
+        {
+            throw new InvalidOperationException($"数据库中未找到规则编码为 {ruleCode} 的规则集，请确认规则已初始化");
+        }
+
+        _logger.LogInformation("开始执行规则审核，规则编码: {RuleCode}，规则类别: {Category}", ruleCode, ruleSet.Category);
+
+        // 3. 查询结算数据
+        var filter = new YuehaiSettlementQueryFilter
+        {
+            InstitutionCode = hospitalCode
+        };
+        var settlements = await _yuehaiSettlementDataRepository.QueryAllSettlementsAsync(filter, cancellationToken);
+
+        if (settlements.Count == 0)
+        {
+            _logger.LogWarning("未查询到符合条件的结算数据，医院编码: {HospitalCode}", hospitalCode);
+            return "未查询到符合条件的结算数据";
+        }
+
+        _logger.LogInformation("查询到结算数据 {Count} 条", settlements.Count);
+
+        // 4. 执行规则管道（传入规则编码，由 DuplicateChargeDbRuleLoader 从数据库加载）
+        var violations = await _rulePipeline.ExecuteAsync(ruleCode, settlements, cancellationToken);
+
+        if (violations.Count == 0)
+        {
+            _logger.LogInformation("规则审核完成，未发现违规记录");
+            return "规则审核完成，未发现违规记录";
+        }
+
+        _logger.LogInformation("规则审核完成，发现 {Count} 条违规记录", violations.Count);
+
+        // 5. 将违规结果导出为Excel
+        var auditedResults = violations.Select(MapToAuditedResult).ToList();
+        var excelFilePath = await _excelExportService.ExportAuditedResultsToExcelAsync(
+            auditedResults,
+            $"规则{ruleCode}审核结果",
+            cancellationToken);
+
+        _logger.LogInformation("违规结果已导出到Excel文件: {FilePath}", excelFilePath);
+
+        return excelFilePath;
+    }
+
+    /// <summary>
+    /// 将规则违规结果映射为审核数据结果，以便复用现有的 Excel 导出服务
+    /// </summary>
+    /// <param name="violation">规则违规结果</param>
+    /// <returns>映射后的审核数据结果</returns>
+    private static AuditedResult MapToAuditedResult(RuleViolation violation)
+    {
+        return new AuditedResult
+        {
+            RuleCode = violation.RuleCode,
+            RuleName = violation.RuleCategory.ToString(),
+            ReasonExplanation = violation.PromptMessage,
+            MedicalRecordNo = violation.PersonnelNo,
+            HospitalCode = violation.InstitutionCode,
+            HospitalName = violation.InstitutionName,
+            ItemCode = violation.ViolationItemCode,
+            ItemName = violation.ViolationItemName,
+            Quantity = violation.ViolationQuantity,
+            UnitPrice = violation.ViolationUnitPrice,
+            Amount = violation.ViolationAmount,
+            Department = violation.ReceivingDeptCode,
+        };
+    }
+
+    #endregion
+
+    #region 审核任务管理服务
+
+    /// <summary>
+    /// 创建审核任务
+    /// </summary>
+    /// <param name="ruleCode">规则编码（必填）</param>
+    /// <param name="hospitalCode">医院编码（可选，为空时表示全部机构）</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>新创建的任务ID</returns>
+    /// <exception cref="ArgumentException">规则编码为空时抛出</exception>
+    [McpServerTool]
+    [Description("创建审核任务，返回任务ID")]
+    public async Task<string> CreateAuditTaskAsync(
+        [Description("规则编码（必填）")] string ruleCode,
+        [Description("医院编码（可选，为空时表示全部机构）")] string? hospitalCode = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(ruleCode))
+        {
+            throw new ArgumentException("规则编码不能为空", nameof(ruleCode));
+        }
+
+        var taskId = Guid.NewGuid().ToString("N");
+        var task = new AuditTask
+        {
+            TaskId = taskId,
+            RuleCode = ruleCode,
+            HospitalCode = hospitalCode,
+            Status = TaskStatus.Pending,
+            TotalCount = 0,
+            ProcessedCount = 0,
+            ViolationCount = 0,
+            CreatedAt = DateTime.Now
+        };
+
+        await _auditTaskRepository.SaveTaskAsync(task, cancellationToken);
+
+        _logger.LogInformation("已创建审核任务，任务ID: {TaskId}，规则编码: {RuleCode}，医院编码: {HospitalCode}",
+            taskId, ruleCode, hospitalCode ?? "全部");
+
+        return taskId;
+    }
+
+    /// <summary>
+    /// 获取审核任务状态
+    /// </summary>
+    /// <param name="taskId">任务ID（必填）</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>任务状态和进度信息</returns>
+    /// <exception cref="ArgumentException">任务ID为空时抛出</exception>
+    /// <exception cref="InvalidOperationException">任务不存在时抛出</exception>
+    [McpServerTool]
+    [Description("获取审核任务状态和进度信息")]
+    public async Task<AuditTaskStatusResponse> GetAuditTaskStatusAsync(
+        [Description("任务ID（必填）")] string taskId,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(taskId))
+        {
+            throw new ArgumentException("任务ID不能为空", nameof(taskId));
+        }
+
+        var task = await _auditTaskRepository.GetTaskAsync(taskId, cancellationToken);
+        if (task == null)
+        {
+            throw new InvalidOperationException($"任务 {taskId} 不存在");
+        }
+
+        var progressPercentage = task.TotalCount > 0
+            ? (int)Math.Round((double)task.ProcessedCount / task.TotalCount * 100, 2)
+            : 0;
+
+        return new AuditTaskStatusResponse
+        {
+            TaskId = task.TaskId,
+            RuleCode = task.RuleCode,
+            HospitalCode = task.HospitalCode,
+            Status = task.Status.ToString(),
+            TotalCount = task.TotalCount,
+            ProcessedCount = task.ProcessedCount,
+            ViolationCount = task.ViolationCount,
+            ProgressPercentage = progressPercentage,
+            CreatedAt = task.CreatedAt,
+            CompletedAt = task.CompletedAt,
+            ErrorMessage = task.ErrorMessage
+        };
+    }
+
+    /// <summary>
+    /// 查询审核结果
+    /// </summary>
+    /// <param name="taskId">任务ID（可选，按任务ID过滤）</param>
+    /// <param name="ruleCode">规则编码（可选，按规则编码过滤）</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>审核结果列表</returns>
+    [McpServerTool]
+    [Description("查询审核结果，可按任务ID或规则编码过滤")]
+    public async Task<IReadOnlyList<AuditResult>> QueryAuditResultsAsync(
+        [Description("任务ID（可选，按任务ID过滤）")] string? taskId = null,
+        [Description("规则编码（可选，按规则编码过滤）")] string? ruleCode = null,
+        CancellationToken cancellationToken = default)
+    {
+        IReadOnlyList<AuditResult> results;
+
+        if (!string.IsNullOrWhiteSpace(taskId))
+        {
+            results = await _auditResultRepository.GetAuditResultsByTaskIdAsync(taskId, cancellationToken);
+            _logger.LogInformation("按任务ID {TaskId} 查询到审核结果 {Count} 条", taskId, results.Count);
+        }
+        else if (!string.IsNullOrWhiteSpace(ruleCode))
+        {
+            results = await _auditResultRepository.GetAuditResultsByRuleCodeAsync(ruleCode, cancellationToken);
+            _logger.LogInformation("按规则编码 {RuleCode} 查询到审核结果 {Count} 条", ruleCode, results.Count);
+        }
+        else
+        {
+            _logger.LogWarning("查询审核结果时未提供任务ID或规则编码，返回空列表");
+            return Array.Empty<AuditResult>();
+        }
+
+        return results;
+    }
+
+    #endregion
+
+    /// <summary>
+    /// 审核任务状态响应模型
+    /// </summary>
+    public class AuditTaskStatusResponse
+    {
+        /// <summary>任务ID</summary>
+        public string TaskId { get; set; } = string.Empty;
+
+        /// <summary>规则编码</summary>
+        public string RuleCode { get; set; } = string.Empty;
+
+        /// <summary>医院编码</summary>
+        public string? HospitalCode { get; set; }
+
+        /// <summary>任务状态</summary>
+        public string Status { get; set; } = string.Empty;
+
+        /// <summary>待审核结算数据总数</summary>
+        public int TotalCount { get; set; }
+
+        /// <summary>已处理结算数据数量</summary>
+        public int ProcessedCount { get; set; }
+
+        /// <summary>违规数量</summary>
+        public int ViolationCount { get; set; }
+
+        /// <summary>进度百分比</summary>
+        public double ProgressPercentage { get; set; }
+
+        /// <summary>任务创建时间</summary>
+        public DateTime CreatedAt { get; set; }
+
+        /// <summary>任务完成时间</summary>
+        public DateTime? CompletedAt { get; set; }
+
+        /// <summary>错误信息</summary>
+        public string? ErrorMessage { get; set; }
+    }
+
 
     /// <summary>
     /// 构建查询过滤器

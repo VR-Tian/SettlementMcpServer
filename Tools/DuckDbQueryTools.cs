@@ -62,7 +62,7 @@ internal class DuckDbQueryTools
     /// <remarks>
     /// <para>
     /// 执行 DuckDB SQL 查询并将结果序列化为 JSON 格式返回。
-    /// 查询语句必须是 SELECT 语句，不支持 DML 操作。
+    /// 查询语句必须是 SELECT 语句，不支持其他 DML 操作。
     /// </para>
     /// <para>
     /// <b>可用视图：</b>

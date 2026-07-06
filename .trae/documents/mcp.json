@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "国新审核数据服务": {
+    "医保结算服务审核": {
       "command": "dotnet",
       "args": [
         "run",

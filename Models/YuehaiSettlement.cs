@@ -17,6 +17,11 @@ public class YuehaiSettlementQueryFilter : IPagedQuery
     public string? MedicalCategory { get; set; }
 
     /// <summary>
+    /// 定点医药机构编码（可选，精确匹配）
+    /// </summary>
+    public string? InstitutionCode { get; set; }
+
+    /// <summary>
     /// 页码（从 1 开始，默认 1）
     /// </summary>
     public int Page { get; set; } = 1;

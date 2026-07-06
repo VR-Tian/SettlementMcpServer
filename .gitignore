@@ -44,3 +44,45 @@ packages/*
 # Test Results
 [Tt]est[Rr]esult*/
 [Bb]uild[Ll]og.*
+
+# DuckDB 数据库文件
+*.db
+*.duckdb
+*.parquet
+
+# 日志文件
+*.log
+logs/
+
+# Excel 临时文件
+~$*.xlsx
+~$*.xls
+
+# 操作系统文件
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 用户配置文件
+appsettings.*.user.json
+launchSettings.user.json
+
+# 临时文件
+*.tmp
+*.bak
+*.swp
+*~
+
+# 规则文件（包含敏感数据）
+.agents/skills/**/*.xlsx
+
+# 性能分析文件
+*.diag
+*.ndp
+
+# 发布目录
+publish/
+
+# 覆盖率报告
+*.coveragexml
+*.coverage

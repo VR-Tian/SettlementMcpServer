@@ -60,6 +60,7 @@ public sealed class OracleYuehaiSettlementDataRepository : OracleRepositoryBase<
         SqlWhereBuilder.AddCondition(yuehaiFilter.InpatientOutpatientNo, "住院_门诊号", "inpatientOutpatientNo", conditions, parameters);
         SqlWhereBuilder.AddCondition(yuehaiFilter.InsuranceType, "险种类型1", "insuranceType", conditions, parameters);
         SqlWhereBuilder.AddCondition(yuehaiFilter.MedicalCategory, "医疗类别", "medicalCategory", conditions, parameters);
+        SqlWhereBuilder.AddCondition(yuehaiFilter.InstitutionCode, "定点医药机构编号", "institutionCode", conditions, parameters);
     }
 
     /// <inheritdoc />
