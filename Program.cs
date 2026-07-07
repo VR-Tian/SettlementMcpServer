@@ -40,13 +40,13 @@ builder.Services
     .WithTools<SyncDataToDuckDbTools>()
     .WithTools<AnalysisDimensionTools>()
     .WithTools<DuckDbQueryTools>();
-    //.WithTools<YuehaiSettlementTools>();
+    //.WithTools<SettlementTools>();
 
 // 注册审核数据访问服务（连接字符串通过环境变量 ORACLE_CONNECTION_STRING 延迟读取）
 builder.Services.AddOracleDataAccess("ORACLE_CONNECTION_STRING");
 
-// 注册YueHai医保结算数据访问服务（连接字符串通过环境变量 YUEHAI_SETTLEMENT_ORACLE_CONNECTION_STRING 延迟读取）
-builder.Services.AddYuehaiSettlementDataAccess("YUEHAI_SETTLEMENT_ORACLE_CONNECTION_STRING");
+// 注册医保结算数据访问服务（连接字符串通过环境变量 _SETTLEMENT_ORACLE_CONNECTION_STRING 延迟读取）
+builder.Services.AddSettlementDataAccess("_SETTLEMENT_ORACLE_CONNECTION_STRING");
 
 // 注册 Excel 导出服务
 // 此扩展方法内部注册了 IExcelExportService → MiniExcelExportService 映射

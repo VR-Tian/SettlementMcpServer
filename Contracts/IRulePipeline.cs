@@ -33,7 +33,7 @@ public interface IRulePipeline
     /// </remarks>
     Task<IReadOnlyList<RuleViolation>> ExecuteAsync(
         string ruleCode,
-        IEnumerable<YuehaiSettlement> settlements,
+        IEnumerable<Settlement> settlements,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -47,6 +47,6 @@ public interface IRulePipeline
     Task<IReadOnlyList<RuleViolation>> ExecuteCombinationAsync(
         IReadOnlyList<string> ruleCodes,
         RuleCombination combination,
-        IEnumerable<YuehaiSettlement> settlements,
+        IEnumerable<Settlement> settlements,
         CancellationToken cancellationToken = default);
 }

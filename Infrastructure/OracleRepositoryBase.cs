@@ -130,6 +130,8 @@ public abstract class OracleRepositoryBase<T> where T : class
             commandTimeout: QueryTimeoutSeconds,
             cancellationToken: cancellationToken);
 
+        logger.LogDebug("执行数据连接地址: {ConnectionString}", connection.ConnectionString);
+
         logger.LogDebug("执行全量查询: Sql={Sql}", sql);
 
         var results = await connection.QueryAsync<T>(commandDefinition);

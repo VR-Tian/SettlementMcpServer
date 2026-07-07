@@ -20,7 +20,7 @@ namespace SettlementMcpServer.Tools;
 /// </para>
 /// <list type="number">
 ///   <item>
-///     <b>步骤 1：同步数据</b> - 调用 <see cref="SyncYuehaiSettlementDataAsync"/> 或
+///     <b>步骤 1：同步数据</b> - 调用 <see cref="SyncSettlementDataAsync"/> 或
 ///     <see cref="SyncAuditedResultDataAsync"/> 将数据同步到 DuckDB。
 ///   </item>
 ///   <item>
@@ -55,12 +55,12 @@ internal class SyncDataToDuckDbTools
     /// <remarks>
     /// <para>
     /// 此方法将 Oracle 中的医保结算数据据导出为 Parquet 文件，并在 DuckDB 中注册为
-    /// <c>yuehai_settlements</c> 视图，供后续分析查询使用。
+    /// <c>_settlements</c> 视图，供后续分析查询使用。
     /// </para>
     /// <para>
     /// <b>使用示例：</b>
     /// <code>
-    /// var result = await SyncYuehaiSettlementDataAsync();
+    /// var result = await SyncSettlementDataAsync();
     /// // result.RecordCount: 同步的记录数
     /// // result.FilePath: Parquet 文件路径
     /// </code>
@@ -68,12 +68,12 @@ internal class SyncDataToDuckDbTools
     /// </remarks>
     [McpServerTool]
     [Description("同步医保结算数据据到 DuckDB，将数据导出为 Parquet 文件并注册为可查询视图")]
-    public async Task<DataSyncResult> SyncYuehaiSettlementDataAsync(
+    public async Task<DataSyncResult> SyncSettlementDataAsync(
         CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("开始同步医保结算数据据到 DuckDB");
 
-        var result = await _dataSyncService.SyncYuehaiSettlementsAsync(cancellationToken);
+        var result = await _dataSyncService.SyncSettlementsAsync(cancellationToken);
 
         _logger.LogInformation(
             "医保结算数据据同步完成，同步 {Count} 条记录，文件路径: {FilePath}",

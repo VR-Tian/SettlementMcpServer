@@ -24,6 +24,6 @@ public interface IRuleCombinationExecutor
     Task<IReadOnlyList<RuleViolation>> ExecuteAsync(
         IReadOnlyList<IRuleSet> ruleSets,
         RuleCombination combination,
-        IEnumerable<YuehaiSettlement> settlements,
+        IEnumerable<Settlement> settlements,
         CancellationToken cancellationToken = default);
 }

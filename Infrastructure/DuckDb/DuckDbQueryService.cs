@@ -87,11 +87,11 @@ public sealed class DuckDbQueryService : IDuckDbQueryService
             using var connection = _connectionFactory.CreateConnection();
             connection.Open();
 
-            // 检查是否存在 yuehai_settlements 或 audited_results 视图
+            // 检查是否存在 _settlements 或 audited_results 视图
             using var command = connection.CreateCommand();
             command.CommandText = """
                 SELECT COUNT(*) FROM information_schema.tables 
-                WHERE table_name IN ('yuehai_settlements', 'audited_results')
+                WHERE table_name IN ('_settlements', 'audited_results')
                 """;
 
             var dbCommand = (DbCommand)command;

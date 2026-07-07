@@ -25,7 +25,7 @@ public class RuleCombinationExecutor : IRuleCombinationExecutor
     public async Task<IReadOnlyList<RuleViolation>> ExecuteAsync(
         IReadOnlyList<IRuleSet> ruleSets,
         RuleCombination combination,
-        IEnumerable<YuehaiSettlement> settlements,
+        IEnumerable<Settlement> settlements,
         CancellationToken cancellationToken = default)
     {
         _logger.LogInformation(
@@ -121,7 +121,7 @@ public class RuleCombinationExecutor : IRuleCombinationExecutor
     /// <returns>违规结果列表</returns>
     private async Task<IReadOnlyList<RuleViolation>> ExecuteSingleRuleAsync(
         IRuleSet ruleSet,
-        IEnumerable<YuehaiSettlement> settlements,
+        IEnumerable<Settlement> settlements,
         CancellationToken cancellationToken)
     {
         var executor = _executors.FirstOrDefault(e => e.SupportedCategory == ruleSet.Category);

@@ -154,15 +154,15 @@ public sealed class MiniExcelExportService : IExcelExportService
     }
 
     /// <inheritdoc />
-    public async Task<string> ExportYuehaiSettlementsToExcelAsync(
-        IEnumerable<YuehaiSettlement> data,
+    public async Task<string> ExportSettlementsToExcelAsync(
+        IEnumerable<Settlement> data,
         string? sheetName = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(data);
 
-        var sheet = sheetName ?? "YueHai结算数据";
-        _logger.LogInformation("开始导出YueHai结算数据到 Excel，工作表: {SheetName}", sheet);
+        var sheet = sheetName ?? "结算数据";
+        _logger.LogInformation("开始导出结算数据到 Excel，工作表: {SheetName}", sheet);
 
         var excelRows = data.Select(MapToExcelRow).ToList();
 
@@ -172,7 +172,7 @@ public sealed class MiniExcelExportService : IExcelExportService
 
         var timestamp = DateTime.Now.ToString("yyyyMMddHHmmss");
         var randomSuffix = Path.GetRandomFileName().Replace(".", "");
-        var fileName = $"YuehaiSettlementExport_{timestamp}_{randomSuffix}.xlsx";
+        var fileName = $"SettlementExport_{timestamp}_{randomSuffix}.xlsx";
         var filePath = Path.Combine(exportFolder, fileName);
 
         await MiniExcel.SaveAsAsync(filePath, excelRows, sheetName: sheet, cancellationToken: cancellationToken);
@@ -181,18 +181,18 @@ public sealed class MiniExcelExportService : IExcelExportService
         var fileSizeKB = fileInfo.Length / 1024.0;
 
         _logger.LogInformation(
-            "YueHai结算数据 Excel 导出完成，文件路径: {FilePath}，文件大小: {FileSizeKB:F1} KB，数据行数: {RowCount}",
+            "结算数据 Excel 导出完成，文件路径: {FilePath}，文件大小: {FileSizeKB:F1} KB，数据行数: {RowCount}",
             filePath, fileSizeKB, excelRows.Count);
 
         return filePath;
     }
 
     /// <summary>
-    /// 将 YuehaiSettlement 实体映射为 Excel 行模型
+    /// 将 Settlement 实体映射为 Excel 行模型
     /// </summary>
-    private static YuehaiSettlementExcelRow MapToExcelRow(YuehaiSettlement settlement)
+    private static SettlementExcelRow MapToExcelRow(Settlement settlement)
     {
-        return new YuehaiSettlementExcelRow
+        return new SettlementExcelRow
         {
             VisitId = settlement.VisitId,
             SettlementId = settlement.SettlementId,
@@ -263,9 +263,9 @@ public sealed class MiniExcelExportService : IExcelExportService
     }
 
     /// <summary>
-    /// YueHai结算数据 Excel 行模型
+    /// 结算数据 Excel 行模型
     /// </summary>
-    private sealed class YuehaiSettlementExcelRow
+    private sealed class SettlementExcelRow
     {
         [ExcelColumnName("就诊ID")]
         public string? VisitId { get; set; }

@@ -4,9 +4,9 @@ using SettlementMcpServer.Contracts;
 namespace SettlementMcpServer.Models;
 
 /// <summary>
-/// YueHai医保结算数据查询条件
+/// 医保结算数据查询条件
 /// </summary>
-public class YuehaiSettlementQueryFilter : IPagedQuery
+public class SettlementQueryFilter : IPagedQuery
 {
     public string? VisitId { get; set; }
     public string? SettlementId { get; set; }
@@ -33,9 +33,9 @@ public class YuehaiSettlementQueryFilter : IPagedQuery
 }
 
 /// <summary>
-/// YueHai医保结算数据结果 - 对应表 YB_YueHai医保结算全量数据
+/// 医保结算数据结果 - 对应表 YB_医保结算全量数据
 /// </summary>
-public class YuehaiSettlement
+public class Settlement
 {
     [JsonPropertyName("就诊ID")]
     public string? VisitId { get; set; }

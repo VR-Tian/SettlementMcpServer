@@ -29,6 +29,6 @@ public interface IRuleExecutor
     /// <returns>违规结果列表，无违规时返回空列表</returns>
     Task<IReadOnlyList<RuleViolation>> ExecuteAsync(
         IRuleSet ruleSet,
-        IEnumerable<YuehaiSettlement> settlements,
+        IEnumerable<Settlement> settlements,
         CancellationToken cancellationToken = default);
 }

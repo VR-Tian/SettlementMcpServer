@@ -41,7 +41,7 @@ public sealed class FrequencyLimitExecutor : IRuleExecutor
     /// <inheritdoc />
     public Task<IReadOnlyList<RuleViolation>> ExecuteAsync(
         IRuleSet ruleSet,
-        IEnumerable<YuehaiSettlement> settlements,
+        IEnumerable<Settlement> settlements,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(ruleSet);

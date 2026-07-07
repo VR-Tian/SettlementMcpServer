@@ -39,7 +39,7 @@ internal class AuditServerTools
     private readonly IAuditDataRepository _auditDataRepository;
     private readonly IExcelExportService _excelExportService;
     private readonly IRulePipeline _rulePipeline;
-    private readonly IYuehaiSettlementDataRepository _yuehaiSettlementDataRepository;
+    private readonly ISettlementDataRepository _SettlementDataRepository;
     private readonly IAuditTaskRepository _auditTaskRepository;
     private readonly IRuleRepository _ruleRepository;
     private readonly IAuditResultRepository _auditResultRepository;
@@ -51,7 +51,7 @@ internal class AuditServerTools
     /// <param name="auditDataRepository">审核数据仓储（由 DI 容器自动注入）</param>
     /// <param name="excelExportService">Excel 导出服务（由 DI 容器自动注入）</param>
     /// <param name="rulePipeline">规则管道（由 DI 容器自动注入）</param>
-    /// <param name="yuehaiSettlementDataRepository">YueHai 结算数据仓储（由 DI 容器自动注入）</param>
+    /// <param name="SettlementDataRepository"> 结算数据仓储（由 DI 容器自动注入）</param>
     /// <param name="auditTaskRepository">审核任务仓储（由 DI 容器自动注入）</param>
     /// <param name="ruleRepository">规则仓储（由 DI 容器自动注入）</param>
     /// <param name="auditResultRepository">审核结果仓储（由 DI 容器自动注入）</param>
@@ -60,7 +60,7 @@ internal class AuditServerTools
         IAuditDataRepository auditDataRepository,
         IExcelExportService excelExportService,
         IRulePipeline rulePipeline,
-        IYuehaiSettlementDataRepository yuehaiSettlementDataRepository,
+        ISettlementDataRepository SettlementDataRepository,
         IAuditTaskRepository auditTaskRepository,
         IRuleRepository ruleRepository,
         IAuditResultRepository auditResultRepository,
@@ -69,7 +69,7 @@ internal class AuditServerTools
         _auditDataRepository = auditDataRepository ?? throw new ArgumentNullException(nameof(auditDataRepository));
         _excelExportService = excelExportService ?? throw new ArgumentNullException(nameof(excelExportService));
         _rulePipeline = rulePipeline ?? throw new ArgumentNullException(nameof(rulePipeline));
-        _yuehaiSettlementDataRepository = yuehaiSettlementDataRepository ?? throw new ArgumentNullException(nameof(yuehaiSettlementDataRepository));
+        _SettlementDataRepository = SettlementDataRepository ?? throw new ArgumentNullException(nameof(SettlementDataRepository));
         _auditTaskRepository = auditTaskRepository ?? throw new ArgumentNullException(nameof(auditTaskRepository));
         _ruleRepository = ruleRepository ?? throw new ArgumentNullException(nameof(ruleRepository));
         _auditResultRepository = auditResultRepository ?? throw new ArgumentNullException(nameof(auditResultRepository));
@@ -274,11 +274,11 @@ internal class AuditServerTools
         _logger.LogInformation("开始执行规则审核，规则编码: {RuleCode}，规则类别: {Category}", ruleCode, ruleSet.Category);
 
         // 3. 查询结算数据
-        var filter = new YuehaiSettlementQueryFilter
+        var filter = new SettlementQueryFilter
         {
             InstitutionCode = hospitalCode
         };
-        var settlements = await _yuehaiSettlementDataRepository.QueryAllSettlementsAsync(filter, cancellationToken);
+        var settlements = await _SettlementDataRepository.QueryAllSettlementsAsync(filter, cancellationToken);
 
         if (settlements.Count == 0)
         {

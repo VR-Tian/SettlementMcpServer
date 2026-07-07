@@ -23,7 +23,7 @@ namespace SettlementMcpServer.Infrastructure.DataSync;
 /// </remarks>
 public sealed class ParquetDataSyncService : IDataSyncService
 {
-    private readonly IYuehaiSettlementDataRepository _yuehaiRepository;
+    private readonly ISettlementDataRepository _Repository;
     private readonly IAuditDataRepository _auditRepository;
     private readonly IDbConnectionFactory _duckDbConnectionFactory;
     private readonly ILogger<ParquetDataSyncService> _logger;
@@ -32,17 +32,17 @@ public sealed class ParquetDataSyncService : IDataSyncService
     /// <summary>
     /// 初始化数据同步服务
     /// </summary>
-    /// <param name="yuehaiRepository">医保结算数据据仓储</param>
+    /// <param name="Repository">医保结算数据据仓储</param>
     /// <param name="auditRepository">审核数据仓储</param>
     /// <param name="duckDbConnectionFactory">DuckDB 连接工厂</param>
     /// <param name="logger">日志记录器</param>
     public ParquetDataSyncService(
-        IYuehaiSettlementDataRepository yuehaiRepository,
+        ISettlementDataRepository Repository,
         IAuditDataRepository auditRepository,
         [FromKeyedServices("duckdb")] IDbConnectionFactory duckDbConnectionFactory,
         ILogger<ParquetDataSyncService>? logger = null)
     {
-        _yuehaiRepository = yuehaiRepository ?? throw new ArgumentNullException(nameof(yuehaiRepository));
+        _Repository = Repository ?? throw new ArgumentNullException(nameof(Repository));
         _auditRepository = auditRepository ?? throw new ArgumentNullException(nameof(auditRepository));
         _duckDbConnectionFactory = duckDbConnectionFactory ?? throw new ArgumentNullException(nameof(duckDbConnectionFactory));
         _logger = logger ?? NullLogger<ParquetDataSyncService>.Instance;
@@ -53,35 +53,52 @@ public sealed class ParquetDataSyncService : IDataSyncService
     }
 
     /// <inheritdoc />
-    public async Task<DataSyncResult> SyncYuehaiSettlementsAsync(CancellationToken cancellationToken = default)
+    public async Task<DataSyncResult> SyncSettlementsAsync(CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("开始同步医保结算数据据到 DuckDB");
+        _logger.LogDebug("同步开始时内存使用: {MemoryMB} MB", GC.GetTotalMemory(forceFullCollection: false) / 1024 / 1024);
 
         // 从 Oracle 读取全部数据
-        var filter = new YuehaiSettlementQueryFilter();
-        var allData = await _yuehaiRepository.QueryAllSettlementsAsync(filter, cancellationToken);
+        var filter = new SettlementQueryFilter();
+        var allData = await _Repository.QueryAllSettlementsAsync(filter, cancellationToken);
 
         _logger.LogInformation("从 Oracle 读取到 {Count} 条医保结算数据据", allData.Count);
+        _logger.LogDebug("读取数据后内存使用: {MemoryMB} MB", GC.GetTotalMemory(forceFullCollection: false) / 1024 / 1024);
 
         // 生成 Parquet 文件路径
-        var fileName = $"yuehai_settlements_{DateTime.Now:yyyyMMddHHmmss}.parquet";
+        var fileName = $"_settlements_{DateTime.Now:yyyyMMddHHmmss}.parquet";
         var filePath = Path.Combine(_dataDirectory, fileName);
 
         // 写入 Parquet 文件
-        await WriteYuehaiSettlementsToParquetAsync(allData, filePath, cancellationToken);
+        await WriteSettlementsToParquetAsync(allData, filePath, cancellationToken);
 
         _logger.LogInformation("医保结算数据据已写入 Parquet 文件: {FilePath}", filePath);
+        _logger.LogDebug("写入 Parquet 后内存使用: {MemoryMB} MB", GC.GetTotalMemory(forceFullCollection: false) / 1024 / 1024);
+
+        // 释放内存引用并手动触发 GC
+        var recordCount = allData.Count;
+        allData = null!;
+        var memoryBefore = GC.GetTotalMemory(forceFullCollection: false);
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+        var memoryAfter = GC.GetTotalMemory(forceFullCollection: false);
+        _logger.LogInformation(
+            "内存回收完成，回收前: {MemoryBefore} MB, 回收后: {MemoryAfter} MB, 释放: {Freed} MB",
+            memoryBefore / 1024 / 1024,
+            memoryAfter / 1024 / 1024,
+            (memoryBefore - memoryAfter) / 1024 / 1024);
 
         // 在 DuckDB 中注册视图
-        await RegisterParquetViewInDuckDbAsync("yuehai_settlements", filePath, cancellationToken);
+        await RegisterParquetViewInDuckDbAsync("_settlements", filePath, cancellationToken);
 
         _logger.LogInformation("医保结算数据据同步完成");
 
         return new DataSyncResult
         {
-            RecordCount = allData.Count,
+            RecordCount = recordCount,
             FilePath = filePath,
-            DataTypeName = "YuehaiSettlement",
+            DataTypeName = "Settlement",
             SyncTime = DateTime.Now
         };
     }
@@ -90,12 +107,14 @@ public sealed class ParquetDataSyncService : IDataSyncService
     public async Task<DataSyncResult> SyncAuditedResultsAsync(CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("开始同步审核数据到 DuckDB");
+        _logger.LogDebug("同步开始时内存使用: {MemoryMB} MB", GC.GetTotalMemory(forceFullCollection: false) / 1024 / 1024);
 
         // 从 Oracle 读取全部数据
         var filter = new AuditedResultQueryFilter();
         var allData = await _auditRepository.QueryAllAuditedResultsAsync(filter, cancellationToken);
 
         _logger.LogInformation("从 Oracle 读取到 {Count} 条审核数据", allData.Count);
+        _logger.LogDebug("读取数据后内存使用: {MemoryMB} MB", GC.GetTotalMemory(forceFullCollection: false) / 1024 / 1024);
 
         // 生成 Parquet 文件路径
         var fileName = $"audited_results_{DateTime.Now:yyyyMMddHHmmss}.parquet";
@@ -105,6 +124,21 @@ public sealed class ParquetDataSyncService : IDataSyncService
         await WriteAuditedResultsToParquetAsync(allData, filePath, cancellationToken);
 
         _logger.LogInformation("审核数据已写入 Parquet 文件: {FilePath}", filePath);
+        _logger.LogDebug("写入 Parquet 后内存使用: {MemoryMB} MB", GC.GetTotalMemory(forceFullCollection: false) / 1024 / 1024);
+
+        // 释放内存引用并手动触发 GC
+        var recordCount = allData.Count;
+        allData = null!;
+        var memoryBefore = GC.GetTotalMemory(forceFullCollection: false);
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+        var memoryAfter = GC.GetTotalMemory(forceFullCollection: false);
+        _logger.LogInformation(
+            "内存回收完成，回收前: {MemoryBefore} MB, 回收后: {MemoryAfter} MB, 释放: {Freed} MB",
+            memoryBefore / 1024 / 1024,
+            memoryAfter / 1024 / 1024,
+            (memoryBefore - memoryAfter) / 1024 / 1024);
 
         // 在 DuckDB 中注册视图
         await RegisterParquetViewInDuckDbAsync("audited_results", filePath, cancellationToken);
@@ -113,7 +147,7 @@ public sealed class ParquetDataSyncService : IDataSyncService
 
         return new DataSyncResult
         {
-            RecordCount = allData.Count,
+            RecordCount = recordCount,
             FilePath = filePath,
             DataTypeName = "AuditedResult",
             SyncTime = DateTime.Now
@@ -123,8 +157,8 @@ public sealed class ParquetDataSyncService : IDataSyncService
     /// <summary>
     /// 将医保结算数据据写入 Parquet 文件
     /// </summary>
-    private async Task WriteYuehaiSettlementsToParquetAsync(
-        IReadOnlyList<YuehaiSettlement> data,
+    private async Task WriteSettlementsToParquetAsync(
+        IReadOnlyList<Settlement> data,
         string filePath,
         CancellationToken cancellationToken)
     {

@@ -16,7 +16,7 @@ public class AuditTaskProcessor
 {
     private readonly IAuditTaskRepository _auditTaskRepository;
     private readonly IRulePipeline _rulePipeline;
-    private readonly IYuehaiSettlementDataRepository _settlementDataRepository;
+    private readonly ISettlementDataRepository _settlementDataRepository;
     private readonly ILogger<AuditTaskProcessor> _logger;
 
     /// <summary>
@@ -29,7 +29,7 @@ public class AuditTaskProcessor
     public AuditTaskProcessor(
         IAuditTaskRepository auditTaskRepository,
         IRulePipeline rulePipeline,
-        IYuehaiSettlementDataRepository settlementDataRepository,
+        ISettlementDataRepository settlementDataRepository,
         ILogger<AuditTaskProcessor> logger)
     {
         _auditTaskRepository = auditTaskRepository ?? throw new ArgumentNullException(nameof(auditTaskRepository));
@@ -70,7 +70,7 @@ public class AuditTaskProcessor
             await _auditTaskRepository.UpdateTaskStatusAsync(taskId, TaskStatus.Running, cancellationToken: cancellationToken);
 
             // 3. 查询待审核结算数据
-            var filter = new YuehaiSettlementQueryFilter
+            var filter = new SettlementQueryFilter
             {
                 InstitutionCode = hospitalCode,
                 Page = 1,

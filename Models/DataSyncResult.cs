@@ -21,7 +21,7 @@ public class DataSyncResult
     public string FilePath { get; set; } = string.Empty;
 
     /// <summary>
-    /// 同步的数据类型名称（如 "YuehaiSettlement" 或 "AuditedResult"）
+    /// 同步的数据类型名称（如 "Settlement" 或 "AuditedResult"）
     /// </summary>
     public string DataTypeName { get; set; } = string.Empty;
 

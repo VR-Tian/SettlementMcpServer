@@ -13,7 +13,7 @@ namespace SettlementMcpServer.Tools;
 /// <remarks>
 /// <para>
 /// 提供预定义的分析维度列表，供 LLM 选择合适的分析视角。
-/// 每个维度包含名称、描述和对应的 SQL 查询模板（DuckDB 语法）。
+/// 每个维度包含名称、描述和适用的数据类型。
 /// </para>
 /// <para>
 /// <b>使用流程：</b>
@@ -24,11 +24,8 @@ namespace SettlementMcpServer.Tools;
 ///     获取所有可用的分析维度。
 ///   </item>
 ///   <item>
-///     <b>步骤 2：获取 SQL</b> - 调用 <see cref="GetAnalysisSqlAsync"/> 获取指定维度的 SQL。
-///   </item>
-///   <item>
-///     <b>步骤 3：执行查询</b> - 使用 <see cref="DuckDbQueryTools.ExecuteDuckDbQueryAsync"/>
-///     执行 SQL 查询。
+///     <b>步骤 2：执行查询</b> - 使用 <see cref="DuckDbQueryTools.ExecuteDuckDbQueryByDimensionAsync"/>
+///     传入维度名称执行查询。
 ///   </item>
 /// </list>
 /// </remarks>
@@ -79,60 +76,5 @@ internal class AnalysisDimensionTools
         _logger.LogDebug("返回 {Count} 个分析维度", dimensions.Count);
 
         return Task.FromResult(dimensions);
-    }
-
-    /// <summary>
-    /// 获取指定分析维度的 SQL 查询语句
-    /// </summary>
-    /// <param name="dimensionName">维度名称（从 GetAvailableAnalysisDimensionsAsync 获取）</param>
-    /// <returns>SQL 查询语句（DuckDB 语法）</returns>
-    /// <exception cref="ArgumentException">维度名称不存在时抛出</exception>
-    /// <remarks>
-    /// <para>
-    /// 获取指定维度的 SQL 查询模板，可直接用于 <see cref="DuckDbQueryTools.ExecuteDuckDbQueryAsync"/>
-    /// 执行查询。
-    /// </para>
-    /// <para>
-    /// <b>使用示例：</b>
-    /// <code>
-    /// // 步骤 1：获取维度列表
-    /// var dimensions = await GetAvailableAnalysisDimensionsAsync();
-    /// // 找到 "hospital_settlement_summary" 维度
-    /// 
-    /// // 步骤 2：获取 SQL
-    /// var sql = await GetAnalysisSqlAsync("hospital_settlement_summary");
-    /// // sql: "SELECT InstitutionCode as 医院编码, ..."
-    /// 
-    /// // 步骤 3：执行查询
-    /// var result = await ExecuteDuckDbQueryAsync(sql);
-    /// </code>
-    /// </para>
-    /// </remarks>
-    [McpServerTool]
-    [Description("获取指定分析维度的 SQL 查询语句，可直接用于 DuckDB 查询执行")]
-    public Task<string> GetAnalysisSqlAsync(
-        [Description("分析维度名称，从 GetAvailableAnalysisDimensionsAsync 返回的 Name 字段获取")]
-        string dimensionName)
-    {
-        if (string.IsNullOrWhiteSpace(dimensionName))
-        {
-            throw new ArgumentException("维度名称不能为空", nameof(dimensionName));
-        }
-
-        _logger.LogDebug("获取分析维度 SQL: {DimensionName}", dimensionName);
-
-        var dimension = _analysisSkillProvider.GetDimensionByName(dimensionName);
-
-        if (dimension == null)
-        {
-            var availableNames = string.Join(", ", _analysisSkillProvider.GetAllDimensions().Select(d => d.Name));
-            throw new ArgumentException(
-                $"未找到名为 '{dimensionName}' 的分析维度。可用的维度名称: {availableNames}",
-                nameof(dimensionName));
-        }
-
-        _logger.LogDebug("返回维度 '{DimensionName}' 的 SQL 模板", dimensionName);
-
-        return Task.FromResult(dimension.SqlTemplate);
     }
 }

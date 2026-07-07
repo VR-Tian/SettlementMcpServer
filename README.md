@@ -60,7 +60,7 @@ SettlementMcpServer/
 ORACLE_CONNECTION_STRING="Data Source=...;User Id=...;Password=..."
 
 # Oracle 数据库连接字符串（医保结算数据源）
-YUEHAI_SETTLEMENT_ORACLE_CONNECTION_STRING="Data Source=...;User Id=...;Password=..."
+_SETTLEMENT_ORACLE_CONNECTION_STRING="Data Source=...;User Id=...;Password=..."
 ```
 
 ### 规则文件
@@ -132,7 +132,7 @@ dotnet run
 - `export_audited_results_to_excel`：导出审核结果为 Excel
 
 ### SyncDataToDuckDbTools（数据同步）
-- `sync_yuehai_settlement_data`：同步医保结算数据到 DuckDB
+- `sync__settlement_data`：同步医保结算数据到 DuckDB
 - `sync_audited_result_data`：同步审核结果数据到 DuckDB
 
 ### AnalysisDimensionTools（分析维度）

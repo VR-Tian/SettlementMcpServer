@@ -37,7 +37,7 @@ public sealed class CrossGroupCoexistExecutor : IRuleExecutor
     /// <inheritdoc />
     public Task<IReadOnlyList<RuleViolation>> ExecuteAsync(
         IRuleSet ruleSet,
-        IEnumerable<YuehaiSettlement> settlements,
+        IEnumerable<Settlement> settlements,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(ruleSet);
@@ -96,11 +96,11 @@ public sealed class CrossGroupCoexistExecutor : IRuleExecutor
     /// <summary>
     /// 按规则维度对结算数据进行分组
     /// </summary>
-    private static Dictionary<string, List<YuehaiSettlement>> GroupSettlements(
+    private static Dictionary<string, List<Settlement>> GroupSettlements(
         DuplicateChargeRule rule,
-        IEnumerable<YuehaiSettlement> settlements)
+        IEnumerable<Settlement> settlements)
     {
-        var result = new Dictionary<string, List<YuehaiSettlement>>();
+        var result = new Dictionary<string, List<Settlement>>();
 
         foreach (var settlement in settlements)
         {
@@ -111,7 +111,7 @@ public sealed class CrossGroupCoexistExecutor : IRuleExecutor
 
             if (!result.TryGetValue(key, out var list))
             {
-                list = new List<YuehaiSettlement>();
+                list = new List<Settlement>();
                 result[key] = list;
             }
 
@@ -144,8 +144,8 @@ public sealed class CrossGroupCoexistExecutor : IRuleExecutor
     /// <summary>
     /// 查找匹配A组项目的结算记录
     /// </summary>
-    private static List<YuehaiSettlement> FindGroupAMatches(
-        IEnumerable<YuehaiSettlement> settlements,
+    private static List<Settlement> FindGroupAMatches(
+        IEnumerable<Settlement> settlements,
         IReadOnlyList<RuleGroupAItem> groupAItems)
     {
         var itemCodes = new HashSet<string>(
@@ -161,8 +161,8 @@ public sealed class CrossGroupCoexistExecutor : IRuleExecutor
     /// <summary>
     /// 查找匹配B组项目的结算记录
     /// </summary>
-    private static List<YuehaiSettlement> FindGroupBMatches(
-        IEnumerable<YuehaiSettlement> settlements,
+    private static List<Settlement> FindGroupBMatches(
+        IEnumerable<Settlement> settlements,
         IReadOnlyList<RuleGroupBItem> groupBItems)
     {
         var itemCodes = new HashSet<string>(
@@ -195,7 +195,7 @@ public sealed class CrossGroupCoexistExecutor : IRuleExecutor
     /// </summary>
     private static RuleViolation CreateViolation(
         DuplicateChargeRuleSet ruleSet,
-        YuehaiSettlement settlement,
+        Settlement settlement,
         string feeOccurrenceDate,
         string? receivingDeptCode)
     {

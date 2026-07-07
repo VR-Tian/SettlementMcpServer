@@ -23,7 +23,7 @@
 
 **当前接口：**
 - `IAuditDataRepository` - 审核数据仓储接口
-- `IYuehaiSettlementDataRepository` - 医保结算数据据仓储接口
+- `ISettlementDataRepository` - 医保结算数据据仓储接口
 - `IExcelExportService` - Excel 导出服务接口
 - `IDbConnectionFactory` - 数据库连接工厂接口
 - `IPagedQuery` - 分页查询参数接口
@@ -42,9 +42,9 @@
   Task<IReadOnlyList<AuditedResult>> QueryAllAuditedResultsAsync(...)
   Task<int> CountAuditedResultsAsync(...)
   
-  // IYuehaiSettlementDataRepository
-  Task<IReadOnlyList<YuehaiSettlement>> QuerySettlementsAsync(...)
-  Task<IReadOnlyList<YuehaiSettlement>> QueryAllSettlementsAsync(...)
+  // ISettlementDataRepository
+  Task<IReadOnlyList<Settlement>> QuerySettlementsAsync(...)
+  Task<IReadOnlyList<Settlement>> QueryAllSettlementsAsync(...)
   Task<int> CountSettlementsAsync(...)
   ```
 
@@ -60,7 +60,7 @@ public interface IRepository<T, TFilter> where T : class where TFilter : IPagedQ
 
 // 具体仓储接口继承通用接口
 public interface IAuditDataRepository : IRepository<AuditedResult, AuditedResultQueryFilter> { }
-public interface IYuehaiSettlementDataRepository : IRepository<YuehaiSettlement, YuehaiSettlementQueryFilter> { }
+public interface ISettlementDataRepository : IRepository<Settlement, SettlementQueryFilter> { }
 ```
 
 ---
@@ -70,11 +70,11 @@ public interface IYuehaiSettlementDataRepository : IRepository<YuehaiSettlement,
 **当前实现：**
 - `OracleRepositoryBase<T>` - 泛型仓储基类
 - `OracleAuditDataRepository` - 审核数据仓储实现
-- `OracleYuehaiSettlementDataRepository` - 医保结算数据据仓储实现
+- `OracleSettlementDataRepository` - 医保结算数据据仓储实现
 - `OracleDbConnectionFactory` - Oracle 连接工厂实现
 - `SqlWhereBuilder` - SQL WHERE 条件构建辅助类
 - `DapperTypeMapBase` - Dapper 类型映射基类
-- `AuditedResultTypeMap` / `YuehaiSettlementTypeMap` - 类型映射实现
+- `AuditedResultTypeMap` / `SettlementTypeMap` - 类型映射实现
 - `MiniExcelExportService` - Excel 导出服务实现
 
 **优点：**
@@ -91,7 +91,7 @@ public interface IYuehaiSettlementDataRepository : IRepository<YuehaiSettlement,
    public interface IExcelExportService
    {
        Task<string> ExportAuditedResultsToExcelAsync(...);
-       Task<string> ExportYuehaiSettlementsToExcelAsync(...);
+       Task<string> ExportSettlementsToExcelAsync(...);
        // 新增数据类型需要修改接口
    }
    ```
@@ -112,7 +112,7 @@ public interface IYuehaiSettlementDataRepository : IRepository<YuehaiSettlement,
    }
    
    public class AuditedResultExcelExporter : IExcelExporter<AuditedResult> { }
-   public class YuehaiSettlementExcelExporter : IExcelExporter<YuehaiSettlement> { }
+   public class SettlementExcelExporter : IExcelExporter<Settlement> { }
    ```
 
 2. **MapToExcelRow 方法重复**
@@ -137,7 +137,7 @@ public interface IYuehaiSettlementDataRepository : IRepository<YuehaiSettlement,
 
 **当前模型：**
 - `AuditedResult` / `AuditedResultQueryFilter` - 审核数据模型和查询过滤器
-- `YuehaiSettlement` / `YuehaiSettlementQueryFilter` - 医保结算数据据模型和查询过滤器
+- `Settlement` / `SettlementQueryFilter` - 医保结算数据据模型和查询过滤器
 - `PaginationMetadata` - 通用分页元数据
 
 **优点：**
@@ -180,7 +180,7 @@ public interface IYuehaiSettlementDataRepository : IRepository<YuehaiSettlement,
    ```
 
 2. **模型类缺少 XML 注释**
-   - `YuehaiSettlement` 类缺少详细的 XML 注释
+   - `Settlement` 类缺少详细的 XML 注释
    - 建议为每个属性添加 `<summary>` 注释
 
 ---
@@ -189,7 +189,7 @@ public interface IYuehaiSettlementDataRepository : IRepository<YuehaiSettlement,
 
 **当前工具类：**
 - `AuditServerTools` - 审核数据工具类
-- `YuehaiSettlementTools` - 医保结算数据据工具类
+- `SettlementTools` - 医保结算数据据工具类
 - `RandomNumberTools` - 随机数工具类
 
 **优点：**
@@ -205,8 +205,8 @@ public interface IYuehaiSettlementDataRepository : IRepository<YuehaiSettlement,
    // AuditServerTools
    private static AuditedResultQueryFilter BuildFilter(...) { }
    
-   // YuehaiSettlementTools
-   private static YuehaiSettlementQueryFilter BuildFilter(...) { }
+   // SettlementTools
+   private static SettlementQueryFilter BuildFilter(...) { }
    ```
 
    **建议提取到工厂类：**
@@ -214,7 +214,7 @@ public interface IYuehaiSettlementDataRepository : IRepository<YuehaiSettlement,
    public static class QueryFilterFactory
    {
        public static AuditedResultQueryFilter CreateAuditedFilter(...) { }
-       public static YuehaiSettlementQueryFilter CreateYuehaiFilter(...) { }
+       public static SettlementQueryFilter CreateFilter(...) { }
    }
    ```
 
@@ -247,7 +247,7 @@ public interface IYuehaiSettlementDataRepository : IRepository<YuehaiSettlement,
 **优点：**
 - ✅ 使用扩展方法封装 DI 注册逻辑
 - ✅ 使用 Keyed Services 区分不同数据源
-- ✅ 方法命名清晰（`AddOracleDataAccess`、`AddYuehaiSettlementDataAccess`）
+- ✅ 方法命名清晰（`AddOracleDataAccess`、`AddSettlementDataAccess`）
 
 **问题：**
 
@@ -294,14 +294,14 @@ public interface IYuehaiSettlementDataRepository : IRepository<YuehaiSettlement,
 
 **问题：**
 
-1. **YuehaiSettlementTools 被注释掉**
+1. **SettlementTools 被注释掉**
    ```csharp
    builder.Services
        .AddMcpServer()
        .WithStdioServerTransport()
        //.WithTools<RandomNumberTools>()
        .WithTools<AuditServerTools>();
-       //.WithTools<YuehaiSettlementTools>();
+       //.WithTools<SettlementTools>();
    ```
    
    **建议确认是否应该启用**
@@ -445,7 +445,7 @@ public async Task FullWorkflow_GetCount_QueryPages_ExportExcel()
 
 ### 7.1 高优先级（建议立即修复）
 
-1. **启用 YuehaiSettlementTools**
+1. **启用 SettlementTools**
    - 当前被注释掉，需要确认是否应该启用
 
 2. **添加输入验证**
@@ -501,7 +501,7 @@ public async Task FullWorkflow_GetCount_QueryPages_ExportExcel()
 - ⚠️ Excel 导出服务违反开闭原则
 - ⚠️ 缺少输入验证
 - ⚠️ 缺少配置管理
-- ⚠️ YuehaiSettlementTools 被注释掉
+- ⚠️ SettlementTools 被注释掉
 
 ### 8.3 总体评价
 

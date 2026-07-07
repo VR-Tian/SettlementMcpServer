@@ -27,8 +27,8 @@ public sealed class AnalysisSkillProvider : IAnalysisSkillProvider
             new()
             {
                 Name = "hospital_settlement_summary",
-                Description = "按医院维度统计结算金额和就诊人次",
-                DataType = "YuehaiSettlement",
+                Description = "医保数据-按医院维度统计结算金额和就诊人次",
+                DataType = "Settlement",
                 SqlTemplate = """
                     SELECT 
                         InstitutionCode as 医院编码,
@@ -36,7 +36,7 @@ public sealed class AnalysisSkillProvider : IAnalysisSkillProvider
                         COUNT(*) as 就诊人次,
                         SUM(FeeDetailTotalAmount) as 费用总额,
                         AVG(FeeDetailTotalAmount) as 平均费用
-                    FROM yuehai_settlements
+                    FROM _settlements
                     WHERE InstitutionCode IS NOT NULL
                     GROUP BY InstitutionCode, InstitutionName
                     ORDER BY 费用总额 DESC
@@ -46,15 +46,15 @@ public sealed class AnalysisSkillProvider : IAnalysisSkillProvider
             new()
             {
                 Name = "department_visit_statistics",
-                Description = "按科室维度统计就诊人次和住院天数",
-                DataType = "YuehaiSettlement",
+                Description = "医保数据-按科室维度统计就诊人次和住院天数",
+                DataType = "Settlement",
                 SqlTemplate = """
                     SELECT 
                         AdmissionDeptName as 入院科室,
                         COUNT(*) as 就诊人次,
                         SUM(HospitalDays) as 总住院天数,
                         AVG(HospitalDays) as 平均住院天数
-                    FROM yuehai_settlements
+                    FROM _settlements
                     WHERE AdmissionDeptName IS NOT NULL
                     GROUP BY AdmissionDeptName
                     ORDER BY 就诊人次 DESC
@@ -64,8 +64,8 @@ public sealed class AnalysisSkillProvider : IAnalysisSkillProvider
             new()
             {
                 Name = "insurance_type_distribution",
-                Description = "按险种类型统计费用分布",
-                DataType = "YuehaiSettlement",
+                Description = "医保数据-按险种类型统计费用分布",
+                DataType = "Settlement",
                 SqlTemplate = """
                     SELECT 
                         InsuranceType1 as 险种类型,
@@ -74,7 +74,7 @@ public sealed class AnalysisSkillProvider : IAnalysisSkillProvider
                         SUM(FullSelfPayAmount) as 全自费金额,
                         SUM(AdvanceSelfPayAmount) as 先行自付金额,
                         SUM(InScopeAmount) as 符合范围金额
-                    FROM yuehai_settlements
+                    FROM _settlements
                     WHERE InsuranceType1 IS NOT NULL
                     GROUP BY InsuranceType1
                     ORDER BY 费用总额 DESC
@@ -83,15 +83,15 @@ public sealed class AnalysisSkillProvider : IAnalysisSkillProvider
             new()
             {
                 Name = "settlement_time_trend",
-                Description = "按时间维度统计结算趋势（按月统计）",
-                DataType = "YuehaiSettlement",
+                Description = "医保数据-按时间维度统计结算趋势（按月统计）",
+                DataType = "Settlement",
                 SqlTemplate = """
                     SELECT 
                         strftime('%Y-%m', SettlementTime) as 结算月份,
                         COUNT(*) as 就诊人次,
                         SUM(FeeDetailTotalAmount) as 费用总额,
                         AVG(FeeDetailTotalAmount) as 平均费用
-                    FROM yuehai_settlements
+                    FROM _settlements
                     WHERE SettlementTime IS NOT NULL
                     GROUP BY strftime('%Y-%m', SettlementTime)
                     ORDER BY 结算月份
@@ -100,15 +100,15 @@ public sealed class AnalysisSkillProvider : IAnalysisSkillProvider
             new()
             {
                 Name = "diagnosis_frequency_analysis",
-                Description = "按诊断维度统计高频疾病",
-                DataType = "YuehaiSettlement",
+                Description = "医保数据-按诊断维度统计高频疾病",
+                DataType = "Settlement",
                 SqlTemplate = """
                     SELECT 
                         PrimaryDiagnosisName as 主诊断名称,
                         COUNT(*) as 就诊人次,
                         SUM(FeeDetailTotalAmount) as 费用总额,
                         AVG(HospitalDays) as 平均住院天数
-                    FROM yuehai_settlements
+                    FROM _settlements
                     WHERE PrimaryDiagnosisName IS NOT NULL
                     GROUP BY PrimaryDiagnosisName
                     ORDER BY 就诊人次 DESC
@@ -118,15 +118,15 @@ public sealed class AnalysisSkillProvider : IAnalysisSkillProvider
             new()
             {
                 Name = "medical_category_analysis",
-                Description = "按医疗类别统计费用分布",
-                DataType = "YuehaiSettlement",
+                Description = "医保数据-按医疗类别统计费用分布",
+                DataType = "Settlement",
                 SqlTemplate = """
                     SELECT 
                         MedicalCategory as 医疗类别,
                         COUNT(*) as 就诊人次,
                         SUM(FeeDetailTotalAmount) as 费用总额,
                         AVG(FeeDetailTotalAmount) as 平均费用
-                    FROM yuehai_settlements
+                    FROM _settlements
                     WHERE MedicalCategory IS NOT NULL
                     GROUP BY MedicalCategory
                     ORDER BY 费用总额 DESC
@@ -137,7 +137,7 @@ public sealed class AnalysisSkillProvider : IAnalysisSkillProvider
             new()
             {
                 Name = "hospital_audit_summary",
-                Description = "按医院维度统计审核违规数量和涉及金额",
+                Description = "审核数据-按医院维度统计审核违规数量和涉及金额",
                 DataType = "AuditedResult",
                 SqlTemplate = """
                     SELECT 
@@ -156,7 +156,7 @@ public sealed class AnalysisSkillProvider : IAnalysisSkillProvider
             new()
             {
                 Name = "rule_violation_analysis",
-                Description = "按规则维度统计违规类型分布",
+                Description = "审核数据-按规则维度统计违规类型分布",
                 DataType = "AuditedResult",
                 SqlTemplate = """
                     SELECT 
@@ -174,7 +174,7 @@ public sealed class AnalysisSkillProvider : IAnalysisSkillProvider
             new()
             {
                 Name = "department_audit_statistics",
-                Description = "按科室维度统计审核情况",
+                Description = "审核数据-按科室维度统计审核情况",
                 DataType = "AuditedResult",
                 SqlTemplate = """
                     SELECT 
@@ -192,7 +192,7 @@ public sealed class AnalysisSkillProvider : IAnalysisSkillProvider
             new()
             {
                 Name = "insurance_type_audit_analysis",
-                Description = "按参保类型统计审核情况",
+                Description = "审核数据-按参保类型统计审核情况",
                 DataType = "AuditedResult",
                 SqlTemplate = """
                     SELECT 

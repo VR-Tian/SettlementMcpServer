@@ -33,7 +33,7 @@ public class RulePipeline : IRulePipeline
     /// <inheritdoc />
     public async Task<IReadOnlyList<RuleViolation>> ExecuteAsync(
         string ruleCode,
-        IEnumerable<YuehaiSettlement> settlements,
+        IEnumerable<Settlement> settlements,
         CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("开始执行规则管道，规则编码: {RuleCode}", ruleCode);
@@ -80,7 +80,7 @@ public class RulePipeline : IRulePipeline
     public async Task<IReadOnlyList<RuleViolation>> ExecuteCombinationAsync(
         IReadOnlyList<string> ruleCodes,
         RuleCombination combination,
-        IEnumerable<YuehaiSettlement> settlements,
+        IEnumerable<Settlement> settlements,
         CancellationToken cancellationToken = default)
     {
         _logger.LogInformation(

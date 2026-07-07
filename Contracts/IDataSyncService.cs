@@ -18,7 +18,7 @@ public interface IDataSyncService
     /// </summary>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>同步结果，包含记录数和文件路径</returns>
-    Task<DataSyncResult> SyncYuehaiSettlementsAsync(CancellationToken cancellationToken = default);
+    Task<DataSyncResult> SyncSettlementsAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 同步审核数据到 DuckDB
