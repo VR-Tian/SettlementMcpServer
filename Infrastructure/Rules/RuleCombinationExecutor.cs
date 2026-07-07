@@ -33,14 +33,14 @@ public class RuleCombinationExecutor : IRuleCombinationExecutor
             combination.CombinationCode,
             combination.CombinationName,
             combination.Mode,
-            combination.RuleCodes.Count);
+            combination.RuleNames.Count);
 
-        // 根据 RuleCodes 过滤规则
-        var filteredRuleSets = FilterRuleSetsByCodes(ruleSets, combination.RuleCodes);
+        // 根据 RuleNames 过滤规则
+        var filteredRuleSets = FilterRuleSetsByNames(ruleSets, combination.RuleNames);
 
         if (filteredRuleSets.Count == 0)
         {
-            _logger.LogWarning("未找到匹配的规则编码，组合编码: {CombinationCode}", combination.CombinationCode);
+            _logger.LogWarning("未找到匹配的规则名称，组合编码: {CombinationCode}", combination.CombinationCode);
             return [];
         }
 
@@ -57,8 +57,8 @@ public class RuleCombinationExecutor : IRuleCombinationExecutor
                 allViolations.AddRange(violations);
 
                 _logger.LogInformation(
-                    "规则 {RuleCode} 执行完成，发现违规数量: {ViolationCount}",
-                    rs.RuleCode,
+                    "规则 {RuleName} 执行完成，发现违规数量: {ViolationCount}",
+                    rs.RuleName,
                     violations.Count);
             }
         }
@@ -89,21 +89,20 @@ public class RuleCombinationExecutor : IRuleCombinationExecutor
     }
 
     /// <summary>
-    /// 根据规则编码过滤规则集
+    /// 根据规则名称过滤规则集
     /// </summary>
     /// <param name="ruleSets">完整规则集列表</param>
-    /// <param name="ruleCodes">需要执行的规则编码列表</param>
+    /// <param name="ruleNames">需要执行的规则名称列表</param>
     /// <returns>过滤后的规则集列表</returns>
-    private List<IRuleSet> FilterRuleSetsByCodes(
+    private List<IRuleSet> FilterRuleSetsByNames(
         IReadOnlyList<IRuleSet> ruleSets,
-        List<string> ruleCodes)
+        List<string> ruleNames)
     {
         var result = new List<IRuleSet>();
 
-        // 过滤出 RuleCode 在指定的 ruleCodes 列表中的规则集
         foreach (var ruleSet in ruleSets)
         {
-            if (ruleCodes.Contains(ruleSet.RuleCode))
+            if (ruleNames.Contains(ruleSet.RuleName))
             {
                 result.Add(ruleSet);
             }
@@ -128,18 +127,18 @@ public class RuleCombinationExecutor : IRuleCombinationExecutor
         if (executor is null)
         {
             _logger.LogError(
-                "找不到支持规则类别 {Category} 的执行器，规则编码: {RuleCode}",
+                "找不到支持规则类别 {Category} 的执行器，规则名称: {RuleName}",
                 ruleSet.Category,
-                ruleSet.RuleCode);
+                ruleSet.RuleName);
 
             throw new InvalidOperationException(
                 $"找不到支持规则类别 {ruleSet.Category} 的执行器");
         }
 
         _logger.LogDebug(
-            "已匹配执行器 {ExecutorType}，规则编码: {RuleCode}，规则类别: {Category}",
+            "已匹配执行器 {ExecutorType}，规则名称: {RuleName}，规则类别: {Category}",
             executor.GetType().Name,
-            ruleSet.RuleCode,
+            ruleSet.RuleName,
             ruleSet.Category);
 
         return await executor.ExecuteAsync(ruleSet, settlements, cancellationToken);

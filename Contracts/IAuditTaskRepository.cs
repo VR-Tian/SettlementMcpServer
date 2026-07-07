@@ -34,10 +34,10 @@ public interface IAuditTaskRepository
     Task<AuditTask?> GetTaskAsync(string taskId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// 根据规则编码查询关联的任务列表
+    /// 根据规则名称查询关联的任务列表
     /// </summary>
-    /// <param name="ruleCode">规则编码</param>
+    /// <param name="ruleName">规则名称</param>
     /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>该规则编码下的任务列表</returns>
-    Task<IReadOnlyList<AuditTask>> GetTasksByRuleCodeAsync(string ruleCode, CancellationToken cancellationToken = default);
+    /// <returns>该规则名称下的任务列表</returns>
+    Task<IReadOnlyList<AuditTask>> GetTasksByRuleNameAsync(string ruleName, CancellationToken cancellationToken = default);
 }

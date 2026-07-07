@@ -10,8 +10,8 @@ namespace SettlementMcpServer.Models.Rules;
 /// </remarks>
 public interface IRuleSet
 {
-    /// <summary>规则编码</summary>
-    string RuleCode { get; }
+    /// <summary>规则名称（来源于文件名）</summary>
+    string RuleName { get; }
 
     /// <summary>规则类别</summary>
     RuleCategory Category { get; }

@@ -65,7 +65,7 @@ public sealed class DuckDbAuditResultRepository : IAuditResultRepository
         {
             const string insertSql = """
                 INSERT INTO audit_results (
-                    id, task_id, rule_code, rule_type,
+                    id, task_id, rule_name, rule_type,
                     personnel_no, personnel_name,
                     institution_code, institution_name,
                     violation_item_code, violation_item_name,
@@ -75,7 +75,7 @@ public sealed class DuckDbAuditResultRepository : IAuditResultRepository
                     prompt_message, status, handle_remark,
                     created_at
                 ) VALUES (
-                    @Id, @TaskId, @RuleCode, @RuleType,
+                    @Id, @TaskId, @RuleName, @RuleType,
                     @PersonnelNo, @PersonnelName,
                     @InstitutionCode, @InstitutionName,
                     @ViolationItemCode, @ViolationItemName,
@@ -123,22 +123,22 @@ public sealed class DuckDbAuditResultRepository : IAuditResultRepository
     }
 
     /// <inheritdoc />
-    public async Task<IReadOnlyList<AuditResult>> GetAuditResultsByRuleCodeAsync(string ruleCode, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<AuditResult>> GetAuditResultsByRuleNameAsync(string ruleName, CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(ruleCode);
+        ArgumentException.ThrowIfNullOrWhiteSpace(ruleName);
 
-        _logger.LogDebug("根据规则编码查询审核结果: {RuleCode}", ruleCode);
+        _logger.LogDebug("根据规则名称查询审核结果: {RuleName}", ruleName);
 
         using var connection = _connectionFactory.CreateConnection();
         connection.Open();
 
         await EnsureTableExistsAsync(connection, cancellationToken);
 
-        const string sql = "SELECT * FROM audit_results WHERE rule_code = @RuleCode ORDER BY created_at DESC";
-        var results = await connection.QueryAsync<AuditResult>(sql, new { RuleCode = ruleCode });
+        const string sql = "SELECT * FROM audit_results WHERE rule_name = @RuleName ORDER BY created_at DESC";
+        var results = await connection.QueryAsync<AuditResult>(sql, new { RuleName = ruleName });
 
         var resultList = results.ToList();
-        _logger.LogDebug("根据规则编码 {RuleCode} 查询到 {Count} 条审核结果", ruleCode, resultList.Count);
+        _logger.LogDebug("根据规则名称 {RuleName} 查询到 {Count} 条审核结果", ruleName, resultList.Count);
 
         return resultList;
     }
@@ -152,7 +152,7 @@ public sealed class DuckDbAuditResultRepository : IAuditResultRepository
             CREATE TABLE IF NOT EXISTS audit_results (
                 id VARCHAR PRIMARY KEY,
                 task_id VARCHAR,
-                rule_code VARCHAR,
+                rule_name VARCHAR,
                 rule_type VARCHAR,
                 personnel_no VARCHAR,
                 personnel_name VARCHAR,
@@ -182,7 +182,7 @@ public sealed class DuckDbAuditResultRepository : IAuditResultRepository
         // 创建索引（使用 IF NOT EXISTS 避免重复创建）
         const string createIndexesSql = """
             CREATE INDEX IF NOT EXISTS idx_audit_results_task_id ON audit_results(task_id);
-            CREATE INDEX IF NOT EXISTS idx_audit_results_rule_code ON audit_results(rule_code);
+            CREATE INDEX IF NOT EXISTS idx_audit_results_rule_name ON audit_results(rule_name);
             CREATE INDEX IF NOT EXISTS idx_audit_results_personnel_no ON audit_results(personnel_no);
             CREATE INDEX IF NOT EXISTS idx_audit_results_institution_code ON audit_results(institution_code);
             """;

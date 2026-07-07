@@ -10,8 +10,8 @@ namespace SettlementMcpServer.Models.Rules;
 /// </remarks>
 public class RuleViolation
 {
-    /// <summary>规则编码</summary>
-    public string RuleCode { get; set; } = string.Empty;
+    /// <summary>规则名称（来源于文件名）</summary>
+    public string RuleName { get; set; } = string.Empty;
 
     /// <summary>规则类别</summary>
     public RuleCategory RuleCategory { get; set; }

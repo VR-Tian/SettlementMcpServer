@@ -117,11 +117,8 @@ public static class ServiceCollectionExtensions
         // 注册规则初始化服务
         services.AddSingleton<IRuleInitializationService, RuleInitializationService>();
 
-        // 注册重复收费规则执行器（4种）
-        services.AddSingleton<IRuleExecutor, CrossGroupCoexistExecutor>();
-        services.AddSingleton<IRuleExecutor, SameGroupDuplicateExecutor>();
-        services.AddSingleton<IRuleExecutor, ThresholdThenExistExecutor>();
-        services.AddSingleton<IRuleExecutor, CrossGroupQuantityThresholdExecutor>();
+        // 注册重复收费规则执行器
+        services.AddSingleton<IRuleExecutor, DuplicateChargeExecutor>();
 
         // 注册限定频次规则执行器
         services.AddSingleton<IRuleExecutor, FrequencyLimitExecutor>();

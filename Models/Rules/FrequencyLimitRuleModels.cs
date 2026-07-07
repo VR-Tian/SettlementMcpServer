@@ -58,8 +58,8 @@ public class FrequencyLimitRule
     /// <summary>有效结束时间</summary>
     public DateTime? ValidEndDate { get; set; }
 
-    /// <summary>负页清单编码（规则编码）</summary>
-    public string RuleCode { get; set; } = string.Empty;
+    /// <summary>项目编码列表（从 ItemCode 按 '|' 分隔解析）</summary>
+    public IReadOnlyList<string> ItemCodes { get; set; } = Array.Empty<string>();
 }
 
 #endregion
@@ -71,17 +71,14 @@ public class FrequencyLimitRule
 /// </summary>
 public class FrequencyLimitRuleSet : IRuleSet
 {
-    /// <summary>主内涵规则</summary>
-    public FrequencyLimitRule Rule { get; set; } = null!;
+    /// <summary>内涵规则列表（Excel 中的所有规则行）</summary>
+    public IReadOnlyList<FrequencyLimitRule> Rules { get; set; } = Array.Empty<FrequencyLimitRule>();
 
     /// <inheritdoc />
-    public string RuleCode => Rule.RuleCode;
+    public string RuleName { get; init; } = string.Empty;
 
     /// <inheritdoc />
-    public RuleCategory Category => RuleCategory.FrequencyLimit;
-
-    /// <summary>项目编码列表（以分隔符'|'组合）</summary>
-    public IReadOnlyList<string> ItemCodes { get; set; } = Array.Empty<string>();
+    public RuleCategory Category => RuleCategory.限定频次规则;
 }
 
 #endregion

@@ -11,8 +11,8 @@ public class AuditResult
     /// <summary>审核任务ID</summary>
     public string TaskId { get; set; } = string.Empty;
 
-    /// <summary>规则编码</summary>
-    public string RuleCode { get; set; } = string.Empty;
+    /// <summary>规则名称（来源于文件名）</summary>
+    public string RuleName { get; set; } = string.Empty;
 
     /// <summary>规则类型</summary>
     public string RuleType { get; set; } = string.Empty;

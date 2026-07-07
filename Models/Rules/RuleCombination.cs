@@ -6,7 +6,7 @@ namespace SettlementMcpServer.Models.Rules;
 public enum ExecutionMode
 {
     /// <summary>
-    /// 顺序执行：按规则编码依次执行
+    /// 顺序执行：按规则名称依次执行
     /// </summary>
     Sequential,
 
@@ -30,6 +30,6 @@ public class RuleCombination
     /// <summary>执行模式（顺序/并行）</summary>
     public ExecutionMode Mode { get; set; }
 
-    /// <summary>组合中包含的规则编码列表</summary>
-    public List<string> RuleCodes { get; set; } = [];
+    /// <summary>组合中包含的规则名称列表</summary>
+    public List<string> RuleNames { get; set; } = [];
 }

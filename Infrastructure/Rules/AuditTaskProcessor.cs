@@ -42,19 +42,19 @@ public class AuditTaskProcessor
     /// 处理审核任务
     /// </summary>
     /// <param name="taskId">任务ID</param>
-    /// <param name="ruleCode">规则编码</param>
+    /// <param name="ruleName">规则名称</param>
     /// <param name="hospitalCode">机构编码（可选，为空时表示全部机构）</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <exception cref="InvalidOperationException">任务不存在时抛出</exception>
     public async Task ProcessTaskAsync(
         string taskId,
-        string ruleCode,
+        string ruleName,
         string? hospitalCode,
         CancellationToken cancellationToken)
     {
         _logger.LogInformation(
-            "开始处理审核任务 {TaskId}，规则编码: {RuleCode}，机构编码: {HospitalCode}",
-            taskId, ruleCode, hospitalCode ?? "(全部)");
+            "开始处理审核任务 {TaskId}，规则名称: {RuleName}，机构编码: {HospitalCode}",
+            taskId, ruleName, hospitalCode ?? "(全部)");
 
         try
         {
@@ -82,8 +82,8 @@ public class AuditTaskProcessor
 
             _logger.LogInformation("任务 {TaskId} 查询到 {Count} 条待审核结算数据", taskId, totalCount);
 
-            // 4. 调用规则管道执行审核（传入规则编码，由管道内部从数据库加载规则）
-            var violations = await _rulePipeline.ExecuteAsync(ruleCode, settlements, cancellationToken);
+            // 4. 调用规则管道执行审核（传入规则名称，由管道内部从数据库加载规则）
+            var violations = await _rulePipeline.ExecuteAsync(ruleName, settlements, cancellationToken);
             var violationCount = violations.Count;
 
             _logger.LogInformation(

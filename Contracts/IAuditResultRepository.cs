@@ -18,7 +18,7 @@ public interface IAuditResultRepository
     Task<IReadOnlyList<AuditResult>> GetAuditResultsByTaskIdAsync(string taskId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// 根据规则编码查询审核结果
+    /// 根据规则名称查询审核结果
     /// </summary>
-    Task<IReadOnlyList<AuditResult>> GetAuditResultsByRuleCodeAsync(string ruleCode, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<AuditResult>> GetAuditResultsByRuleNameAsync(string ruleName, CancellationToken cancellationToken = default);
 }

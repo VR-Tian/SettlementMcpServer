@@ -37,9 +37,6 @@ public enum DuplicateChargeRuleType
 /// </summary>
 public class DuplicateChargeRule
 {
-    /// <summary>规则编码（负页清单编码）</summary>
-    public string RuleCode { get; set; } = string.Empty;
-
     /// <summary>状态</summary>
     public string Status { get; set; } = string.Empty;
 
@@ -62,13 +59,13 @@ public class DuplicateChargeRule
     public string PromptMessage { get; set; } = string.Empty;
 
     /// <summary>是否审核收费时间相同</summary>
-    public bool CheckSameChargeTime { get; set; }
+    public bool? CheckSameChargeTime { get; set; }
 
     /// <summary>备注信息</summary>
     public string? Remark { get; set; }
 
     /// <summary>是否审核同一个执行科室</summary>
-    public bool CheckSameExecDept { get; set; }
+    public bool? CheckSameExecDept { get; set; }
 
     /// <summary>有效开始时间</summary>
     public DateTime? ValidStartDate { get; set; }
@@ -123,14 +120,14 @@ public class RuleGroupBItem
 /// </summary>
 public class DuplicateChargeRuleSet : IRuleSet
 {
-    /// <summary>主内涵规则</summary>
+    /// <summary>规则内涵（单条规则定义）</summary>
     public DuplicateChargeRule Rule { get; set; } = null!;
 
     /// <inheritdoc />
-    public string RuleCode => Rule.RuleCode;
+    public string RuleName { get; init; } = string.Empty;
 
     /// <inheritdoc />
-    public RuleCategory Category => RuleCategory.DuplicateCharge;
+    public RuleCategory Category => RuleCategory.重复收费规则;
 
     /// <summary>A组项目列表</summary>
     public IReadOnlyList<RuleGroupAItem> GroupAItems { get; set; } = Array.Empty<RuleGroupAItem>();

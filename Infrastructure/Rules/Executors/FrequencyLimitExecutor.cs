@@ -36,7 +36,7 @@ public sealed class FrequencyLimitExecutor : IRuleExecutor
     }
 
     /// <inheritdoc />
-    public RuleCategory SupportedCategory => RuleCategory.FrequencyLimit;
+    public RuleCategory SupportedCategory => RuleCategory.限定频次规则;
 
     /// <inheritdoc />
     public Task<IReadOnlyList<RuleViolation>> ExecuteAsync(
@@ -52,20 +52,16 @@ public sealed class FrequencyLimitExecutor : IRuleExecutor
             throw new ArgumentException($"规则集类型必须是 {nameof(FrequencyLimitRuleSet)}", nameof(ruleSet));
         }
 
-        var rule = frequencyLimitRuleSet.Rule;
-        var itemCodes = frequencyLimitRuleSet.ItemCodes;
-
         _logger.LogInformation(
-            "开始执行限定频次规则审核，规则编码: {RuleCode}，项目名称: {ItemName}，项目编码数量: {ItemCount}",
-            rule.RuleCode,
-            rule.ItemName,
-            itemCodes.Count);
+            "开始执行限定频次规则审核，规则名称: {RuleName}，规则数量: {RuleCount}",
+            frequencyLimitRuleSet.RuleName,
+            frequencyLimitRuleSet.Rules.Count);
 
         var violations = new List<RuleViolation>();
 
         // 按人员编号 + 费用发生日期分组
         var groupedSettlements = settlements
-            .Where(s => !string.IsNullOrEmpty(s.PersonnelNo) && 
+            .Where(s => !string.IsNullOrEmpty(s.PersonnelNo) &&
                         !string.IsNullOrEmpty(s.FeeOccurrenceTime))
             .GroupBy(s => new
             {
@@ -76,94 +72,65 @@ public sealed class FrequencyLimitExecutor : IRuleExecutor
 
         _logger.LogDebug("数据分组完成，共 {GroupCount} 个分组", groupedSettlements.Count);
 
-        foreach (var group in groupedSettlements)
+        // 遍历每条规则
+        foreach (var rule in frequencyLimitRuleSet.Rules)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var personnelNo = group.Key.PersonnelNo;
-            var feeDate = group.Key.FeeDate;
+            // 使用每条规则自身的 ItemCodes 属性
+            var itemCodes = rule.ItemCodes;
 
-            // 筛选当前分组中包含的项目
-            var groupItems = group
-                .Where(s => itemCodes.Contains(s.InsuranceCatalogCode ?? string.Empty))
-                .ToList();
+            _logger.LogDebug(
+                "执行规则：项目名称: {ItemName}，项目编码: {ItemCode}",
+                rule.ItemName,
+                rule.ItemCode);
 
-            if (groupItems.Count == 0)
+            foreach (var group in groupedSettlements)
             {
-                continue;
-            }
+                cancellationToken.ThrowIfCancellationRequested();
 
-            // 规则1：聚合汇总同一天多个项目编码的总数量
-            var totalQuantity = groupItems.Sum(s => s.Quantity ?? 0);
+                var personnelNo = group.Key.PersonnelNo;
+                var feeDate = group.Key.FeeDate;
 
-            // 规则2：平均数量是否超出住院天数
-            if (rule.InpatientLimitCount.HasValue && rule.InpatientLimitCount.Value > 0)
-            {
-                var hospitalDays = groupItems.First().HospitalDays ?? 1;
-                var avgQuantityPerDay = totalQuantity / hospitalDays;
+                // 筛选当前分组中包含的项目
+                var groupItems = group
+                    .Where(s => itemCodes.Contains(s.InsuranceCatalogCode ?? string.Empty))
+                    .ToList();
 
-                if (avgQuantityPerDay > rule.InpatientLimitCount.Value)
+                if (groupItems.Count == 0)
                 {
-                    _logger.LogDebug(
-                        "发现违规：人员 {PersonnelNo} 在 {FeeDate} 的日均数量 {AvgQuantity} 超过限定次数 {LimitCount}",
-                        personnelNo,
-                        feeDate,
-                        avgQuantityPerDay,
-                        rule.InpatientLimitCount.Value);
-
-                    foreach (var item in groupItems)
-                    {
-                        violations.Add(new RuleViolation
-                        {
-                            RuleCode = rule.RuleCode,
-                            RuleCategory = RuleCategory.FrequencyLimit,
-                            PersonnelNo = personnelNo,
-                            FeeOccurrenceDate = feeDate,
-                            InstitutionCode = item.InstitutionCode ?? string.Empty,
-                            InstitutionName = item.InstitutionName ?? string.Empty,
-                            GroupCodeA = string.Join("|", itemCodes),
-                            GroupCodeB = string.Empty,
-                            ViolationItemCode = item.InsuranceCatalogCode ?? string.Empty,
-                            ViolationItemName = item.InsuranceCatalogName ?? string.Empty,
-                            ViolationQuantity = item.Quantity,
-                            ViolationUnitPrice = item.UnitPrice,
-                            ViolationAmount = item.FeeDetailTotalAmount,
-                            PromptMessage = rule.PromptMessage,
-                            ReceivingDeptCode = item.ReceivingDeptCode,
-                            ReceivingDeptName = item.ReceivingDeptName
-                        });
-                    }
+                    continue;
                 }
-            }
 
-            // 规则3：同一天项目编码总数量是否超限
-            if (rule.OutpatientLimitCount.HasValue && rule.OutpatientLimitCount.Value > 0)
-            {
-                if (totalQuantity > rule.OutpatientLimitCount.Value)
+                // 规则1：聚合汇总同一天多个项目编码的总数量
+                var totalQuantity = groupItems.Sum(s => s.Quantity ?? 0);
+
+                // 规则2：平均数量是否超出住院天数
+                if (rule.InpatientLimitCount.HasValue && rule.InpatientLimitCount.Value > 0)
                 {
-                    _logger.LogDebug(
-                        "发现违规：人员 {PersonnelNo} 在 {FeeDate} 的总数量 {TotalQuantity} 超过限定次数 {LimitCount}",
-                        personnelNo,
-                        feeDate,
-                        totalQuantity,
-                        rule.OutpatientLimitCount.Value);
+                    var hospitalDays = groupItems.First().HospitalDays ?? 1;
+                    var avgQuantityPerDay = totalQuantity / hospitalDays;
 
-                    foreach (var item in groupItems)
+                    if (avgQuantityPerDay > rule.InpatientLimitCount.Value)
                     {
-                        // 避免重复添加（如果已经在规则2中添加了）
-                        if (!violations.Any(v => v.PersonnelNo == personnelNo && 
-                                                  v.FeeOccurrenceDate == feeDate && 
-                                                  v.ViolationItemCode == item.InsuranceCatalogCode))
+                        _logger.LogDebug(
+                            "发现违规：人员 {PersonnelNo} 在 {FeeDate} 的日均数量 {AvgQuantity} 超过限定次数 {LimitCount}",
+                            personnelNo,
+                            feeDate,
+                            avgQuantityPerDay,
+                            rule.InpatientLimitCount.Value);
+
+                        foreach (var item in groupItems)
                         {
                             violations.Add(new RuleViolation
                             {
-                                RuleCode = rule.RuleCode,
-                                RuleCategory = RuleCategory.FrequencyLimit,
+                                RuleName = frequencyLimitRuleSet.RuleName,
+                                RuleCategory = RuleCategory.限定频次规则,
                                 PersonnelNo = personnelNo,
                                 FeeOccurrenceDate = feeDate,
                                 InstitutionCode = item.InstitutionCode ?? string.Empty,
                                 InstitutionName = item.InstitutionName ?? string.Empty,
-                                GroupCodeA = string.Join("|", itemCodes),
+                                GroupCodeA = rule.ItemCode,
                                 GroupCodeB = string.Empty,
                                 ViolationItemCode = item.InsuranceCatalogCode ?? string.Empty,
                                 ViolationItemName = item.InsuranceCatalogName ?? string.Empty,
@@ -177,12 +144,55 @@ public sealed class FrequencyLimitExecutor : IRuleExecutor
                         }
                     }
                 }
+
+                // 规则3：同一天项目编码总数量是否超限
+                if (rule.OutpatientLimitCount.HasValue && rule.OutpatientLimitCount.Value > 0)
+                {
+                    if (totalQuantity > rule.OutpatientLimitCount.Value)
+                    {
+                        _logger.LogDebug(
+                            "发现违规：人员 {PersonnelNo} 在 {FeeDate} 的总数量 {TotalQuantity} 超过限定次数 {LimitCount}",
+                            personnelNo,
+                            feeDate,
+                            totalQuantity,
+                            rule.OutpatientLimitCount.Value);
+
+                        foreach (var item in groupItems)
+                        {
+                            // 避免重复添加（如果已经在规则2中添加了）
+                            if (!violations.Any(v => v.PersonnelNo == personnelNo &&
+                                                      v.FeeOccurrenceDate == feeDate &&
+                                                      v.ViolationItemCode == item.InsuranceCatalogCode))
+                            {
+                                violations.Add(new RuleViolation
+                                {
+                                    RuleName = frequencyLimitRuleSet.RuleName,
+                                    RuleCategory = RuleCategory.限定频次规则,
+                                    PersonnelNo = personnelNo,
+                                    FeeOccurrenceDate = feeDate,
+                                    InstitutionCode = item.InstitutionCode ?? string.Empty,
+                                    InstitutionName = item.InstitutionName ?? string.Empty,
+                                    GroupCodeA = rule.ItemCode,
+                                    GroupCodeB = string.Empty,
+                                    ViolationItemCode = item.InsuranceCatalogCode ?? string.Empty,
+                                    ViolationItemName = item.InsuranceCatalogName ?? string.Empty,
+                                    ViolationQuantity = item.Quantity,
+                                    ViolationUnitPrice = item.UnitPrice,
+                                    ViolationAmount = item.FeeDetailTotalAmount,
+                                    PromptMessage = rule.PromptMessage,
+                                    ReceivingDeptCode = item.ReceivingDeptCode,
+                                    ReceivingDeptName = item.ReceivingDeptName
+                                });
+                            }
+                        }
+                    }
+                }
             }
         }
 
         _logger.LogInformation(
-            "限定频次规则审核完成，规则编码: {RuleCode}，发现 {ViolationCount} 条违规记录",
-            rule.RuleCode,
+            "限定频次规则审核完成，规则名称: {RuleName}，发现 {ViolationCount} 条违规记录",
+            frequencyLimitRuleSet.RuleName,
             violations.Count);
 
         return Task.FromResult<IReadOnlyList<RuleViolation>>(violations);

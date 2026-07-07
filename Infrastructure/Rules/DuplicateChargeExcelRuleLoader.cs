@@ -38,7 +38,7 @@ public sealed class DuplicateChargeExcelRuleLoader : IRuleLoader
     }
 
     /// <inheritdoc />
-    public RuleCategory SupportedCategory => RuleCategory.DuplicateCharge;
+    public RuleCategory SupportedCategory => RuleCategory.重复收费规则;
 
     /// <inheritdoc />
     public async Task<IRuleSet> LoadRuleSetAsync(
@@ -53,6 +53,9 @@ public sealed class DuplicateChargeExcelRuleLoader : IRuleLoader
         }
 
         _logger.LogInformation("开始从 Excel 文件加载重复收费规则数据，文件路径: {FilePath}", filePath);
+
+        // 从文件名提取规则名称（不含扩展名）
+        var ruleName = Path.GetFileNameWithoutExtension(filePath);
 
         // 获取 Excel 文件中的所有 Sheet 名称（MiniExcel 的 GetSheetNames 是同步方法）
         var sheetNames = MiniExcel.GetSheetNames(filePath).ToList();
@@ -77,45 +80,30 @@ public sealed class DuplicateChargeExcelRuleLoader : IRuleLoader
         var domainGroupAItems = groupAItems.Select(MapToDomainGroupAItem).ToList();
         var domainGroupBItems = groupBItems.Select(MapToDomainGroupBItem).ToList();
 
-        // 构建规则集列表
-        var ruleSets = new List<DuplicateChargeRuleSet>();
-
-        foreach (var rule in domainRules)
-        {
-            // 根据 GroupCodeA 关联 A 组项目
-            var relatedGroupAItems = domainGroupAItems
-                .Where(x => x.GroupCodeA == rule.GroupCodeA)
-                .ToList();
-
-            // 根据 GroupCodeB 关联 B 组项目
-            var relatedGroupBItems = domainGroupBItems
-                .Where(x => x.GroupCodeB == rule.GroupCodeB)
-                .ToList();
-
-            var ruleSet = new DuplicateChargeRuleSet
-            {
-                Rule = rule,
-                GroupAItems = relatedGroupAItems.AsReadOnly(),
-                GroupBItems = relatedGroupBItems.AsReadOnly()
-            };
-
-            ruleSets.Add(ruleSet);
-
-            _logger.LogDebug(
-                "重复收费规则 {RuleCode} 关联 A 组项目 {GroupACount} 个，B 组项目 {GroupBCount} 个",
-                rule.RuleCode, relatedGroupAItems.Count, relatedGroupBItems.Count);
-        }
-
-        // 返回第一个规则集（通常 Excel 文件中只有一条规则）
-        // 如果需要支持多条规则，可以修改接口返回 IReadOnlyList<DuplicateChargeRuleSet>
-        if (ruleSets.Count == 0)
+        // 构建规则集（规则是一个整体，使用第一行内涵作为规则定义）
+        if (domainRules.Count == 0)
         {
             throw new InvalidOperationException("Excel 文件中未找到有效的重复收费规则数据");
         }
 
-        _logger.LogInformation("重复收费规则集构建完成，共 {RuleSetCount} 个规则集", ruleSets.Count);
+        if (domainRules.Count > 1)
+        {
+            _logger.LogWarning(
+                "Excel 内涵表包含 {Count} 行数据，但规则是一个整体，仅使用第一行作为规则定义",
+                domainRules.Count);
+        }
 
-        return ruleSets[0];
+        var ruleSet = new DuplicateChargeRuleSet
+        {
+            RuleName = ruleName,
+            Rule = domainRules[0],
+            GroupAItems = domainGroupAItems.AsReadOnly(),
+            GroupBItems = domainGroupBItems.AsReadOnly()
+        };
+
+        _logger.LogInformation("重复收费规则集构建完成，规则名称: {RuleName}", ruleName);
+
+        return ruleSet;
     }
 
     /// <inheritdoc />
@@ -197,7 +185,6 @@ public sealed class DuplicateChargeExcelRuleLoader : IRuleLoader
     {
         return new DuplicateChargeRule
         {
-            RuleCode = row.RuleCode ?? string.Empty,
             Status = row.Status ?? string.Empty,
             GroupCodeA = row.GroupCodeA ?? string.Empty,
             GroupCodeB = row.GroupCodeB ?? string.Empty,
@@ -284,9 +271,6 @@ public sealed class DuplicateChargeExcelRuleLoader : IRuleLoader
     /// </summary>
     private sealed class DuplicateChargeRuleExcelRow
     {
-        [ExcelColumnName("规则编码")]
-        public string? RuleCode { get; set; }
-
         [ExcelColumnName("状态")]
         public string? Status { get; set; }
 
@@ -309,13 +293,13 @@ public sealed class DuplicateChargeExcelRuleLoader : IRuleLoader
         public string? PromptMessage { get; set; }
 
         [ExcelColumnName("是否审核收费时间相同")]
-        public bool CheckSameChargeTime { get; set; }
+        public bool? CheckSameChargeTime { get; set; }
 
         [ExcelColumnName("备注信息")]
         public string? Remark { get; set; }
 
         [ExcelColumnName("是否审核同一个执行科室")]
-        public bool CheckSameExecDept { get; set; }
+        public bool? CheckSameExecDept { get; set; }
 
         [ExcelColumnName("有效开始时间")]
         public DateTime? ValidStartDate { get; set; }

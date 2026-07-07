@@ -8,8 +8,8 @@ public class AuditTask
     /// <summary>任务ID</summary>
     public string TaskId { get; set; } = string.Empty;
 
-    /// <summary>规则编码</summary>
-    public string RuleCode { get; set; } = string.Empty;
+    /// <summary>规则名称</summary>
+    public string RuleName { get; set; } = string.Empty;
 
     /// <summary>机构编码（可选，为空时表示全部机构）</summary>
     public string? HospitalCode { get; set; }

@@ -84,7 +84,7 @@ public sealed class CompositeRuleLoader : IRuleLoader
                     var ruleSet = loader.LoadRuleSetAsync(filePath, cancellationToken).GetAwaiter().GetResult();
                     allRuleSets.Add(ruleSet);
                     
-                    _logger.LogInformation("成功加载规则集: {RuleCode}，类别: {Category}", ruleSet.RuleCode, category);
+                    _logger.LogInformation("成功加载规则集: {RuleName}，类别: {Category}", ruleSet.RuleName, category);
                 }
                 else
                 {
@@ -113,15 +113,15 @@ public sealed class CompositeRuleLoader : IRuleLoader
 
         if (fileName.Contains("重复收费") || fileName.Contains("duplicate"))
         {
-            return RuleCategory.DuplicateCharge;
+            return RuleCategory.重复收费规则;
         }
 
         if (fileName.Contains("限定频次") || fileName.Contains("frequency"))
         {
-            return RuleCategory.FrequencyLimit;
+            return RuleCategory.限定频次规则;
         }
 
         // 默认返回重复收费类别
-        return RuleCategory.DuplicateCharge;
+        return RuleCategory.重复收费规则;
     }
 }

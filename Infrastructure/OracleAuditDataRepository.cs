@@ -56,7 +56,7 @@ public sealed class OracleAuditDataRepository : OracleRepositoryBase<AuditedResu
         SqlWhereBuilder.AddCondition(auditFilter.MedicalRecordNo, "病案号", "medicalRecordNo", conditions, parameters);
         SqlWhereBuilder.AddCondition(auditFilter.HospitalCode, "医院编码", "hospitalCode", conditions, parameters);
         SqlWhereBuilder.AddCondition(auditFilter.InsuredNo, "参保人号", "insuredNo", conditions, parameters);
-        SqlWhereBuilder.AddCondition(auditFilter.RuleCode, "规则编码", "ruleCode", conditions, parameters);
+        SqlWhereBuilder.AddCondition(auditFilter.RuleName, "规则名称", "ruleName", conditions, parameters);
     }
 
     /// <inheritdoc />

@@ -36,7 +36,7 @@ public sealed class DuckDbAuditTaskRepository : IAuditTaskRepository
     {
         ArgumentNullException.ThrowIfNull(task);
 
-        _logger.LogInformation("保存审核任务 {TaskId}，规则编码: {RuleCode}", task.TaskId, task.RuleCode);
+        _logger.LogInformation("保存审核任务 {TaskId}，规则名称: {RuleName}", task.TaskId, task.RuleName);
 
         using var connection = _connectionFactory.CreateConnection();
         connection.Open();
@@ -45,11 +45,11 @@ public sealed class DuckDbAuditTaskRepository : IAuditTaskRepository
 
         const string insertSql = """
             INSERT INTO audit_tasks (
-                task_id, rule_code, hospital_code, status,
+                task_id, rule_name, hospital_code, status,
                 total_count, processed_count, violation_count,
                 created_at, completed_at, error_message
             ) VALUES (
-                @TaskId, @RuleCode, @HospitalCode, @Status,
+                @TaskId, @RuleName, @HospitalCode, @Status,
                 @TotalCount, @ProcessedCount, @ViolationCount,
                 @CreatedAt, @CompletedAt, @ErrorMessage
             )
@@ -117,21 +117,21 @@ public sealed class DuckDbAuditTaskRepository : IAuditTaskRepository
     }
 
     /// <inheritdoc />
-    public async Task<IReadOnlyList<AuditTask>> GetTasksByRuleCodeAsync(
-        string ruleCode,
+    public async Task<IReadOnlyList<AuditTask>> GetTasksByRuleNameAsync(
+        string ruleName,
         CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(ruleCode);
+        ArgumentException.ThrowIfNullOrWhiteSpace(ruleName);
 
-        _logger.LogDebug("根据规则编码查询任务: {RuleCode}", ruleCode);
+        _logger.LogDebug("根据规则名称查询任务: {RuleName}", ruleName);
 
         using var connection = _connectionFactory.CreateConnection();
         connection.Open();
 
         await EnsureTableExistsAsync(connection, cancellationToken);
 
-        const string sql = "SELECT * FROM audit_tasks WHERE rule_code = @RuleCode ORDER BY created_at DESC";
-        var tasks = await connection.QueryAsync<AuditTaskDto>(sql, new { RuleCode = ruleCode });
+        const string sql = "SELECT * FROM audit_tasks WHERE rule_name = @RuleName ORDER BY created_at DESC";
+        var tasks = await connection.QueryAsync<AuditTaskDto>(sql, new { RuleName = ruleName });
 
         return tasks.Select(MapToAuditTask).ToList();
     }
@@ -144,7 +144,7 @@ public sealed class DuckDbAuditTaskRepository : IAuditTaskRepository
         const string createTableSql = """
             CREATE TABLE IF NOT EXISTS audit_tasks (
                 task_id VARCHAR PRIMARY KEY,
-                rule_code VARCHAR,
+                rule_name VARCHAR,
                 hospital_code VARCHAR,
                 status VARCHAR,
                 total_count INTEGER,
@@ -162,7 +162,7 @@ public sealed class DuckDbAuditTaskRepository : IAuditTaskRepository
         await dbCommand.ExecuteNonQueryAsync(cancellationToken);
 
         const string createIndexSql = """
-            CREATE INDEX IF NOT EXISTS idx_audit_tasks_rule_code ON audit_tasks(rule_code);
+            CREATE INDEX IF NOT EXISTS idx_audit_tasks_rule_name ON audit_tasks(rule_name);
             CREATE INDEX IF NOT EXISTS idx_audit_tasks_status ON audit_tasks(status);
             """;
 
@@ -180,7 +180,7 @@ public sealed class DuckDbAuditTaskRepository : IAuditTaskRepository
         return new AuditTask
         {
             TaskId = dto.TaskId,
-            RuleCode = dto.RuleCode,
+            RuleName = dto.RuleName,
             HospitalCode = dto.HospitalCode,
             Status = Enum.TryParse<TaskStatus>(dto.Status, ignoreCase: true, out var s)
                 ? s
@@ -200,7 +200,7 @@ public sealed class DuckDbAuditTaskRepository : IAuditTaskRepository
     private sealed class AuditTaskDto
     {
         public string TaskId { get; set; } = string.Empty;
-        public string RuleCode { get; set; } = string.Empty;
+        public string RuleName { get; set; } = string.Empty;
         public string? HospitalCode { get; set; }
         public string Status { get; set; } = string.Empty;
         public int TotalCount { get; set; }

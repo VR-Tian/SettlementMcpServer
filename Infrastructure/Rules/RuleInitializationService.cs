@@ -16,27 +16,27 @@ namespace SettlementMcpServer.Infrastructure.Rules;
 /// </remarks>
 public sealed class RuleInitializationService : IRuleInitializationService
 {
-    private readonly DuplicateChargeExcelRuleLoader _excelRuleLoader;
+    private readonly IRuleLoader _ruleLoader;
     private readonly IRuleRepository _ruleRepository;
     private readonly ILogger<RuleInitializationService> _logger;
 
     /// <summary>
     /// 规则文件目录
     /// </summary>
-    private const string RulesDirectory = ".agents/skills/重复收费规则";
+    private const string RulesDirectory = ".agents/skills";
 
     /// <summary>
     /// 初始化规则初始化服务
     /// </summary>
-    /// <param name="excelRuleLoader">重复收费规则 Excel 加载器（用于从 Excel 加载规则）</param>
+    /// <param name="ruleLoader">规则加载器（根据文件路径自动选择对应类别的加载器）</param>
     /// <param name="ruleRepository">规则仓储（用于保存规则到数据库）</param>
     /// <param name="logger">日志记录器</param>
     public RuleInitializationService(
-        DuplicateChargeExcelRuleLoader excelRuleLoader,
+        IRuleLoader ruleLoader,
         IRuleRepository ruleRepository,
         ILogger<RuleInitializationService>? logger = null)
     {
-        _excelRuleLoader = excelRuleLoader ?? throw new ArgumentNullException(nameof(excelRuleLoader));
+        _ruleLoader = ruleLoader ?? throw new ArgumentNullException(nameof(ruleLoader));
         _ruleRepository = ruleRepository ?? throw new ArgumentNullException(nameof(ruleRepository));
         _logger = logger ?? NullLogger<RuleInitializationService>.Instance;
     }
@@ -102,34 +102,36 @@ public sealed class RuleInitializationService : IRuleInitializationService
 
                 _logger.LogDebug("处理规则文件: {FileName}, 最后修改时间: {LastWriteTime}", fileName, lastWriteTime);
 
-                // 从文件名提取规则编码（去掉扩展名）
-                var ruleCode = Path.GetFileNameWithoutExtension(fileName);
+                // 从文件名提取规则名称（去掉扩展名）
+                var ruleName = Path.GetFileNameWithoutExtension(fileName);
 
                 // 检查数据库中是否已存在该规则
-                var existingRule = await _ruleRepository.GetRuleSetByCodeAsync(ruleCode, cancellationToken);
+                var existingRule = await _ruleRepository.GetRuleSetByNameAsync(ruleName, cancellationToken);
 
                 if (existingRule != null)
                 {
                     // TODO: 可以在数据库中记录文件修改时间，用于增量更新判断
                     // 目前暂时每次都重新加载
-                    _logger.LogDebug("规则 {RuleCode} 已存在于数据库中，将更新", ruleCode);
+                    _logger.LogDebug("规则 {RuleName} 已存在于数据库中，将更新", ruleName);
                 }
 
-                // 从 Excel 加载规则集
+                // 从 Excel 加载规则集（CompositeRuleLoader 会根据文件路径自动选择对应的加载器）
                 _logger.LogInformation("从 Excel 文件加载规则: {FileName}", fileName);
-                var ruleSet = (DuplicateChargeRuleSet)await _excelRuleLoader.LoadRuleSetAsync(excelFile, cancellationToken);
+                var ruleSet = await _ruleLoader.LoadRuleSetAsync(excelFile, cancellationToken);
 
-                // 确保规则编码与文件名一致
-                if (string.IsNullOrEmpty(ruleSet.Rule.RuleCode))
+                // 确保规则名称与文件名一致
+                if (string.IsNullOrEmpty(ruleSet.RuleName))
                 {
-                    ruleSet.Rule.RuleCode = ruleCode;
+                    // 由于 IRuleSet 接口没有设置 RuleName 的方法，需要在具体实现类中处理
+                    // 这里暂时跳过，由具体的加载器负责设置正确的 RuleName
+                    _logger.LogDebug("规则 {RuleName} 的 RuleName 为空，使用文件名作为 RuleName", ruleName);
                 }
 
                 // 保存到数据库
                 await _ruleRepository.SaveRuleSetAsync(ruleSet, cancellationToken);
 
                 successCount++;
-                _logger.LogInformation("规则 {RuleCode} 初始化成功", ruleCode);
+                _logger.LogInformation("规则 {RuleName} 初始化成功", ruleName);
             }
             catch (Exception ex)
             {

@@ -1,6 +1,7 @@
 using System.Data;
 using System.Data.Common;
 using System.Text.Json;
+using DuckDB.NET.Data;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -47,36 +48,34 @@ public sealed class DuckDbRuleRepository : IRuleRepository
     }
 
     /// <inheritdoc />
-    public async Task<IRuleSet?> GetRuleSetByCodeAsync(string ruleCode, CancellationToken cancellationToken = default)
+    public async Task<IRuleSet?> GetRuleSetByNameAsync(string ruleName, CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrEmpty(ruleCode);
+        ArgumentException.ThrowIfNullOrEmpty(ruleName);
 
-        _logger.LogDebug("从数据库加载规则，规则编码: {RuleCode}", ruleCode);
+        _logger.LogDebug("从数据库加载规则，规则名称: {RuleName}", ruleName);
 
         await EnsureTableExistsAsync(cancellationToken);
+
+        _logger.LogDebug("执行确保规则表存在（如果不存在则创建）步骤成功");
 
         using var connection = _connectionFactory.CreateConnection();
         connection.Open();
 
         var dbCommand = (DbCommand)connection.CreateCommand();
-        dbCommand.CommandText = "SELECT rule_category, rule_json FROM audit_rules WHERE rule_code = @rule_code LIMIT 1";
-        var param = dbCommand.CreateParameter();
-        param.ParameterName = "rule_code";
-        param.Value = ruleCode;
-        dbCommand.Parameters.Add(param);
-
+        dbCommand.CommandText = "SELECT rule_category, rule_json FROM audit_rules WHERE rule_name = $1 LIMIT 1";
+        AddParameter(dbCommand, "1", ruleName);
         var reader = await dbCommand.ExecuteReaderAsync(cancellationToken);
         if (await reader.ReadAsync(cancellationToken))
         {
             var category = reader.GetInt32(0);
             var ruleJson = reader.GetString(1);
-            
+            _logger.LogDebug("执行查询规则数据成功，准备反序列化为规则集");
             var ruleSet = DeserializeRuleSet((RuleCategory)category, ruleJson);
-            _logger.LogDebug("规则 {RuleCode} 加载成功，类别: {Category}", ruleCode, (RuleCategory)category);
+            _logger.LogDebug("规则 {RuleName} 加载成功，类别: {Category}", ruleName, (RuleCategory)category);
             return ruleSet;
         }
 
-        _logger.LogDebug("规则 {RuleCode} 在数据库中不存在", ruleCode);
+        _logger.LogDebug("规则 {RuleName} 在数据库中不存在", ruleName);
         return null;
     }
 
@@ -87,10 +86,10 @@ public sealed class DuckDbRuleRepository : IRuleRepository
 
         await EnsureTableExistsAsync(cancellationToken);
 
-        var ruleCode = ruleSet.RuleCode;
+        var ruleName = ruleSet.RuleName;
         var category = (int)ruleSet.Category;
 
-        _logger.LogInformation("保存规则 {RuleCode} 到数据库，类别: {Category}", ruleCode, ruleSet.Category);
+        _logger.LogInformation("保存规则 {RuleName} 到数据库，类别: {Category}", ruleName, ruleSet.Category);
 
         // 序列化完整的规则集为 JSON
         var ruleJson = JsonSerializer.Serialize(ruleSet, ruleSet.GetType(), JsonOptions);
@@ -102,15 +101,15 @@ public sealed class DuckDbRuleRepository : IRuleRepository
         var dbCommand = (DbCommand)connection.CreateCommand();
         dbCommand.CommandText = """
             UPDATE audit_rules SET
-                rule_category = @rule_category,
-                rule_json = @rule_json,
+                rule_category = $1,
+                rule_json = $2,
                 updated_at = CURRENT_TIMESTAMP
-            WHERE rule_code = @rule_code
+            WHERE rule_name = $3
             """;
 
-        AddParameter(dbCommand, "rule_code", ruleCode);
-        AddParameter(dbCommand, "rule_category", category);
-        AddParameter(dbCommand, "rule_json", ruleJson);
+        AddParameter(dbCommand, "$1", category);
+        AddParameter(dbCommand, "$2", ruleJson);
+        AddParameter(dbCommand, "$3", ruleName);
 
         var rowsAffected = await dbCommand.ExecuteNonQueryAsync(cancellationToken);
 
@@ -120,27 +119,27 @@ public sealed class DuckDbRuleRepository : IRuleRepository
             var insertCommand = (DbCommand)connection.CreateCommand();
             insertCommand.CommandText = """
                 INSERT INTO audit_rules (
-                    rule_code, rule_category, rule_json, created_at, updated_at
+                    rule_name, rule_category, rule_json, created_at, updated_at
                 ) VALUES (
-                    @rule_code, @rule_category, @rule_json, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+                    $1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
                 )
                 """;
 
-            AddParameter(insertCommand, "rule_code", ruleCode);
-            AddParameter(insertCommand, "rule_category", category);
-            AddParameter(insertCommand, "rule_json", ruleJson);
+            AddParameter(insertCommand, "$1", ruleName);
+            AddParameter(insertCommand, "$2", category);
+            AddParameter(insertCommand, "$3", ruleJson);
 
             await insertCommand.ExecuteNonQueryAsync(cancellationToken);
-            _logger.LogInformation("规则 {RuleCode} 插入成功", ruleCode);
+            _logger.LogInformation("规则 {RuleName} 插入成功", ruleName);
         }
         else
         {
-            _logger.LogInformation("规则 {RuleCode} 更新成功", ruleCode);
+            _logger.LogInformation("规则 {RuleName} 更新成功", ruleName);
         }
     }
 
     /// <inheritdoc />
-    public async Task<IReadOnlyList<string>> GetAllRuleCodesAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<string>> GetAllRuleNamesAsync(CancellationToken cancellationToken = default)
     {
         await EnsureTableExistsAsync(cancellationToken);
 
@@ -148,22 +147,22 @@ public sealed class DuckDbRuleRepository : IRuleRepository
         connection.Open();
 
         var dbCommand = (DbCommand)connection.CreateCommand();
-        dbCommand.CommandText = "SELECT rule_code FROM audit_rules ORDER BY rule_code";
+        dbCommand.CommandText = "SELECT rule_name FROM audit_rules ORDER BY rule_name";
 
         var reader = await dbCommand.ExecuteReaderAsync(cancellationToken);
-        var ruleCodes = new List<string>();
+        var ruleNames = new List<string>();
 
         while (await reader.ReadAsync(cancellationToken))
         {
-            ruleCodes.Add(reader.GetString(0));
+            ruleNames.Add(reader.GetString(0));
         }
 
-        _logger.LogDebug("获取到 {Count} 个规则编码", ruleCodes.Count);
-        return ruleCodes.AsReadOnly();
+        _logger.LogDebug("获取到 {Count} 个规则名称", ruleNames.Count);
+        return ruleNames.AsReadOnly();
     }
 
     /// <inheritdoc />
-    public async Task<IReadOnlyList<string>> GetRuleCodesByCategoryAsync(RuleCategory category, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<string>> GetRuleNamesByCategoryAsync(RuleCategory category, CancellationToken cancellationToken = default)
     {
         await EnsureTableExistsAsync(cancellationToken);
 
@@ -171,19 +170,19 @@ public sealed class DuckDbRuleRepository : IRuleRepository
         connection.Open();
 
         var dbCommand = (DbCommand)connection.CreateCommand();
-        dbCommand.CommandText = "SELECT rule_code FROM audit_rules WHERE rule_category = @rule_category ORDER BY rule_code";
-        AddParameter(dbCommand, "rule_category", (int)category);
+        dbCommand.CommandText = "SELECT rule_name FROM audit_rules WHERE rule_category = $1 ORDER BY rule_name";
+        AddParameter(dbCommand, "$1", (int)category);
 
         var reader = await dbCommand.ExecuteReaderAsync(cancellationToken);
-        var ruleCodes = new List<string>();
+        var ruleNames = new List<string>();
 
         while (await reader.ReadAsync(cancellationToken))
         {
-            ruleCodes.Add(reader.GetString(0));
+            ruleNames.Add(reader.GetString(0));
         }
 
-        _logger.LogDebug("获取到 {Count} 个 {Category} 类别的规则编码", ruleCodes.Count, category);
-        return ruleCodes.AsReadOnly();
+        _logger.LogDebug("获取到 {Count} 个 {Category} 类别的规则名称", ruleNames.Count, category);
+        return ruleNames.AsReadOnly();
     }
 
     /// <summary>
@@ -196,8 +195,8 @@ public sealed class DuckDbRuleRepository : IRuleRepository
     {
         return category switch
         {
-            RuleCategory.DuplicateCharge => JsonSerializer.Deserialize<DuplicateChargeRuleSet>(ruleJson, JsonOptions),
-            RuleCategory.FrequencyLimit => JsonSerializer.Deserialize<FrequencyLimitRuleSet>(ruleJson, JsonOptions),
+            RuleCategory.重复收费规则 => JsonSerializer.Deserialize<DuplicateChargeRuleSet>(ruleJson, JsonOptions),
+            RuleCategory.限定频次规则 => JsonSerializer.Deserialize<FrequencyLimitRuleSet>(ruleJson, JsonOptions),
             _ => throw new InvalidOperationException($"不支持的规则类别: {category}")
         };
     }
@@ -214,7 +213,7 @@ public sealed class DuckDbRuleRepository : IRuleRepository
         var dbCommand = (DbCommand)connection.CreateCommand();
         dbCommand.CommandText = """
             CREATE TABLE IF NOT EXISTS audit_rules (
-                rule_code VARCHAR PRIMARY KEY,
+                rule_name VARCHAR PRIMARY KEY,
                 rule_category INTEGER NOT NULL,
                 rule_json VARCHAR NOT NULL,
                 created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -233,9 +232,7 @@ public sealed class DuckDbRuleRepository : IRuleRepository
     /// <param name="value">参数值</param>
     private static void AddParameter(DbCommand command, string parameterName, object? value)
     {
-        var parameter = command.CreateParameter();
-        parameter.ParameterName = parameterName;
-        parameter.Value = value ?? DBNull.Value;
+        var parameter = new DuckDBParameter(parameterName) { Value = value ?? DBNull.Value };
         command.Parameters.Add(parameter);
     }
 }

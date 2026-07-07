@@ -29,7 +29,7 @@ public sealed class FrequencyLimitExcelRuleLoader : IRuleLoader
     }
 
     /// <inheritdoc />
-    public RuleCategory SupportedCategory => RuleCategory.FrequencyLimit;
+    public RuleCategory SupportedCategory => RuleCategory.限定频次规则;
 
     /// <inheritdoc />
     public Task<IRuleSet> LoadRuleSetAsync(string filePath, CancellationToken cancellationToken = default)
@@ -43,7 +43,10 @@ public sealed class FrequencyLimitExcelRuleLoader : IRuleLoader
             throw new FileNotFoundException("限定频次规则 Excel 文件不存在", filePath);
         }
 
-        // 读取主内涵表
+        // 从文件名提取规则名称（不含扩展名）
+        var ruleName = Path.GetFileNameWithoutExtension(filePath);
+
+        // 读取主内涵表（所有规则行）
         var rules = LoadFrequencyLimitRules(filePath);
 
         if (rules.Count == 0)
@@ -51,27 +54,16 @@ public sealed class FrequencyLimitExcelRuleLoader : IRuleLoader
             throw new InvalidOperationException("Excel 文件中未找到限定频次规则数据");
         }
 
-        if (rules.Count > 1)
-        {
-            _logger.LogWarning("Excel 文件中包含多条规则（{Count}），将使用第一条规则", rules.Count);
-        }
-
-        var rule = rules[0];
-
-        // 解析项目编码列表（以分隔符'|'组合）
-        var itemCodes = ParseItemCodes(rule.ItemCode);
-
         var ruleSet = new FrequencyLimitRuleSet
         {
-            Rule = rule,
-            ItemCodes = itemCodes
+            RuleName = ruleName,
+            Rules = rules
         };
 
         _logger.LogInformation(
-            "限定频次规则加载完成，规则编码: {RuleCode}，项目名称: {ItemName}，项目编码数量: {ItemCount}",
-            ruleSet.RuleCode,
-            rule.ItemName,
-            itemCodes.Count);
+            "限定频次规则加载完成，规则名称: {RuleName}，规则数量: {RuleCount}",
+            ruleName,
+            rules.Count);
 
         return Task.FromResult<IRuleSet>(ruleSet);
     }
@@ -147,9 +139,10 @@ public sealed class FrequencyLimitExcelRuleLoader : IRuleLoader
     /// <returns>限定频次规则</returns>
     private static FrequencyLimitRule MapToFrequencyLimitRule(FrequencyLimitRuleExcelRow row)
     {
+        var itemCode = row.ItemCode?.Trim() ?? string.Empty;
         return new FrequencyLimitRule
         {
-            ItemCode = row.ItemCode?.Trim() ?? string.Empty,
+            ItemCode = itemCode,
             ItemName = row.ItemName?.Trim() ?? string.Empty,
             TimeInterval = ConvertToInt(row.TimeInterval),
             InpatientLimitCount = row.InpatientLimitCount,
@@ -166,7 +159,7 @@ public sealed class FrequencyLimitExcelRuleLoader : IRuleLoader
             TimeIntervalType = row.TimeIntervalType?.Trim() ?? string.Empty,
             ValidStartDate = row.ValidStartDate,
             ValidEndDate = row.ValidEndDate,
-            RuleCode = row.RuleCode?.Trim() ?? string.Empty
+            ItemCodes = ParseItemCodes(itemCode)
         };
     }
 
@@ -322,8 +315,5 @@ public sealed class FrequencyLimitExcelRuleLoader : IRuleLoader
 
         /// <summary>有效结束时间</summary>
         public DateTime? ValidEndDate { get; set; }
-
-        /// <summary>负页清单编码（规则编码）</summary>
-        public string RuleCode { get; set; }
     }
 }

@@ -6,8 +6,8 @@ namespace SettlementMcpServer.Models.Rules;
 public enum RuleCategory
 {
     /// <summary>重复收费规则</summary>
-    DuplicateCharge = 1,
+    重复收费规则 = 1,
 
     /// <summary>限定频次规则</summary>
-    FrequencyLimit = 2
+    限定频次规则 = 2
 }

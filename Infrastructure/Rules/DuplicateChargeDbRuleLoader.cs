@@ -27,18 +27,18 @@ public sealed class DuplicateChargeDbRuleLoader : IRuleLoader
     }
 
     /// <inheritdoc />
-    public RuleCategory SupportedCategory => RuleCategory.DuplicateCharge;
+    public RuleCategory SupportedCategory => RuleCategory.重复收费规则;
 
     /// <inheritdoc />
     public async Task<IRuleSet> LoadRuleSetAsync(string filePath, CancellationToken cancellationToken = default)
     {
-        // filePath 参数在这里实际上是 ruleCode
-        var ruleCode = filePath;
+        // filePath 参数在这里实际上是 ruleName
+        var ruleName = filePath;
 
-        var ruleSet = await _ruleRepository.GetRuleSetByCodeAsync(ruleCode, cancellationToken);
+        var ruleSet = await _ruleRepository.GetRuleSetByNameAsync(ruleName, cancellationToken);
         if (ruleSet == null)
         {
-            throw new InvalidOperationException($"重复收费规则 {ruleCode} 不存在于数据库中");
+            throw new InvalidOperationException($"重复收费规则 {ruleName} 不存在于数据库中");
         }
 
         return ruleSet;
@@ -48,12 +48,12 @@ public sealed class DuplicateChargeDbRuleLoader : IRuleLoader
     public async Task<IReadOnlyList<IRuleSet>> LoadAllRuleSetsAsync(string directoryPath, CancellationToken cancellationToken = default)
     {
         // filePath 参数在这里被忽略，从数据库加载所有重复收费规则
-        var ruleCodes = await _ruleRepository.GetAllRuleCodesAsync(cancellationToken);
+        var ruleNames = await _ruleRepository.GetAllRuleNamesAsync(cancellationToken);
 
         var ruleSets = new List<IRuleSet>();
-        foreach (var ruleCode in ruleCodes)
+        foreach (var ruleName in ruleNames)
         {
-            var ruleSet = await _ruleRepository.GetRuleSetByCodeAsync(ruleCode, cancellationToken);
+            var ruleSet = await _ruleRepository.GetRuleSetByNameAsync(ruleName, cancellationToken);
             if (ruleSet != null)
             {
                 ruleSets.Add(ruleSet);

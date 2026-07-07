@@ -82,7 +82,7 @@ internal class AuditServerTools
     /// <param name="medicalRecordNo">病案号（可选，精确匹配）</param>
     /// <param name="hospitalCode">医院编码（可选，精确匹配）</param>
     /// <param name="insuredNo">参保人号（可选，精确匹配）</param>
-    /// <param name="ruleCode">规则编码（可选，精确匹配）</param>
+    /// <param name="ruleName">规则名称（可选，精确匹配）</param>
     /// <param name="pageSize">每页条数，默认 100，最大 500</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>分页元数据（总记录数、总页数、当前页等）</returns>
@@ -114,11 +114,11 @@ internal class AuditServerTools
         [Description("病案号（可选）")] string? medicalRecordNo = null,
         [Description("医院编码（可选）")] string? hospitalCode = null,
         [Description("参保人号（可选）")] string? insuredNo = null,
-        [Description("规则编码（可选）")] string? ruleCode = null,
+        [Description("规则名称（可选）")] string? ruleName = null,
         [Description("每页条数（默认100，最大500）")] int pageSize = 100,
         CancellationToken cancellationToken = default)
     {
-        var filter = BuildFilter(medicalRecordNo, hospitalCode, insuredNo, ruleCode);
+        var filter = BuildFilter(medicalRecordNo, hospitalCode, insuredNo, ruleName);
 
         var totalCount = await _auditDataRepository.CountAuditedResultsAsync(filter, cancellationToken);
 
@@ -136,7 +136,7 @@ internal class AuditServerTools
     /// <param name="medicalRecordNo">病案号（可选，精确匹配）</param>
     /// <param name="hospitalCode">医院编码（可选，精确匹配）</param>
     /// <param name="insuredNo">参保人号（可选，精确匹配）</param>
-    /// <param name="ruleCode">规则编码（可选，精确匹配）</param>
+    /// <param name="ruleName">规则名称（可选，精确匹配）</param>
     /// <param name="page">页码，从 1 开始，默认 1</param>
     /// <param name="pageSize">每页条数，默认 100，最大 500</param>
     /// <param name="cancellationToken">取消令牌</param>
@@ -158,12 +158,12 @@ internal class AuditServerTools
         [Description("病案号（可选）")] string? medicalRecordNo = null,
         [Description("医院编码（可选）")] string? hospitalCode = null,
         [Description("参保人号（可选）")] string? insuredNo = null,
-        [Description("规则编码（可选）")] string? ruleCode = null,
+        [Description("规则名称（可选）")] string? ruleName = null,
         [Description("页码，从1开始（默认1）")] int page = 1,
         [Description("每页条数（默认100，最大500）")] int pageSize = 100,
         CancellationToken cancellationToken = default)
     {
-        var filter = BuildFilter(medicalRecordNo, hospitalCode, insuredNo, ruleCode, page, pageSize);
+        var filter = BuildFilter(medicalRecordNo, hospitalCode, insuredNo, ruleName, page, pageSize);
 
         return await _auditDataRepository.QueryAuditedResultsAsync(filter, cancellationToken);
     }
@@ -174,7 +174,7 @@ internal class AuditServerTools
     /// <param name="medicalRecordNo">病案号（可选，精确匹配）</param>
     /// <param name="hospitalCode">医院编码（可选，精确匹配）</param>
     /// <param name="insuredNo">参保人号（可选，精确匹配）</param>
-    /// <param name="ruleCode">规则编码（可选，精确匹配）</param>
+    /// <param name="ruleName">规则名称（可选，精确匹配）</param>
     /// <param name="sheetName">工作表名称（默认 "审核数据"）</param>
     /// <param name="pageSize">内部分页每页条数，默认 100，最大 500</param>
     /// <param name="cancellationToken">取消令牌</param>
@@ -220,12 +220,12 @@ internal class AuditServerTools
         [Description("病案号（可选）")] string? medicalRecordNo = null,
         [Description("医院编码（可选）")] string? hospitalCode = null,
         [Description("参保人号（可选）")] string? insuredNo = null,
-        [Description("规则编码（可选）")] string? ruleCode = null,
+        [Description("规则名称（可选）")] string? ruleName = null,
         [Description("工作表名称（默认\"审核数据\"）")] string? sheetName = null,
         CancellationToken cancellationToken = default)
     {
         // 直接查询全部数据（不分页）
-        var filter = BuildFilter(medicalRecordNo, hospitalCode, insuredNo, ruleCode);
+        var filter = BuildFilter(medicalRecordNo, hospitalCode, insuredNo, ruleName);
         var allResults = await _auditDataRepository.QueryAllAuditedResultsAsync(filter, cancellationToken);
 
         if (allResults.Count == 0)
@@ -243,35 +243,35 @@ internal class AuditServerTools
     #region  规则内涵执行审核服务
 
     /// <summary>
-    /// 根据规则编码从数据库加载规则并审核医保数据，分析结果保存到本机临时文件夹并返回文件路径
+    /// 根据规则名称从数据库加载规则并审核医保数据，分析结果保存到本机临时文件夹并返回文件路径
     /// </summary>
-    /// <param name="ruleCode">规则编码（必填，用于从数据库加载规则集）</param>
+    /// <param name="ruleName">规则名称（必填，用于从数据库加载规则集）</param>
     /// <param name="hospitalCode">医院编码（可选，按定点医药机构编号过滤结算数据）</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>导出的违规结果 Excel 文件完整路径；无违规或无数据时返回提示信息</returns>
-    /// <exception cref="ArgumentException">规则编码为空时抛出</exception>
+    /// <exception cref="ArgumentException">规则名称为空时抛出</exception>
     /// <exception cref="InvalidOperationException">数据库中未找到对应规则时抛出</exception>
     [McpServerTool]
-    [Description("根据规则编码从数据库加载规则审核医保数据，分析结果保存到本机临时文件夹并返回文件路径")]
+    [Description("根据规则名称从数据库加载规则审核医保数据，分析结果保存到本机临时文件夹并返回文件路径")]
     public async Task<string> ExecAuditAnalysisAsync(
-        [Description("规则编码")] string? ruleCode = null,
+        [Description("规则名称")] string? ruleName = null,
         [Description("医院编码（可选）")] string? hospitalCode = null,
         CancellationToken cancellationToken = default)
     {
         // 1. 验证参数
-        if (string.IsNullOrWhiteSpace(ruleCode))
+        if (string.IsNullOrWhiteSpace(ruleName))
         {
-            throw new ArgumentException("规则编码不能为空", nameof(ruleCode));
+            throw new ArgumentException("规则名称不能为空", nameof(ruleName));
         }
 
         // 2. 从数据库加载规则
-        var ruleSet = await _ruleRepository.GetRuleSetByCodeAsync(ruleCode, cancellationToken);
+        var ruleSet = await _ruleRepository.GetRuleSetByNameAsync(ruleName, cancellationToken);
         if (ruleSet == null)
         {
-            throw new InvalidOperationException($"数据库中未找到规则编码为 {ruleCode} 的规则集，请确认规则已初始化");
+            throw new InvalidOperationException($"数据库中未找到规则名称为 {ruleName} 的规则集，请确认规则已初始化");
         }
 
-        _logger.LogInformation("开始执行规则审核，规则编码: {RuleCode}，规则类别: {Category}", ruleCode, ruleSet.Category);
+        _logger.LogInformation("开始执行规则审核，规则名称: {RuleName}，规则类别: {Category}", ruleName, ruleSet.Category);
 
         // 3. 查询结算数据
         var filter = new SettlementQueryFilter
@@ -288,8 +288,8 @@ internal class AuditServerTools
 
         _logger.LogInformation("查询到结算数据 {Count} 条", settlements.Count);
 
-        // 4. 执行规则管道（传入规则编码，由 DuplicateChargeDbRuleLoader 从数据库加载）
-        var violations = await _rulePipeline.ExecuteAsync(ruleCode, settlements, cancellationToken);
+        // 4. 执行规则管道（传入规则名称，由 DuplicateChargeDbRuleLoader 从数据库加载）
+        var violations = await _rulePipeline.ExecuteAsync(ruleName, settlements, cancellationToken);
 
         if (violations.Count == 0)
         {
@@ -303,7 +303,7 @@ internal class AuditServerTools
         var auditedResults = violations.Select(MapToAuditedResult).ToList();
         var excelFilePath = await _excelExportService.ExportAuditedResultsToExcelAsync(
             auditedResults,
-            $"规则{ruleCode}审核结果",
+            $"规则{ruleName}审核结果",
             cancellationToken);
 
         _logger.LogInformation("违规结果已导出到Excel文件: {FilePath}", excelFilePath);
@@ -320,8 +320,7 @@ internal class AuditServerTools
     {
         return new AuditedResult
         {
-            RuleCode = violation.RuleCode,
-            RuleName = violation.RuleCategory.ToString(),
+            RuleName = violation.RuleName,
             ReasonExplanation = violation.PromptMessage,
             MedicalRecordNo = violation.PersonnelNo,
             HospitalCode = violation.InstitutionCode,
@@ -342,28 +341,28 @@ internal class AuditServerTools
     /// <summary>
     /// 创建审核任务
     /// </summary>
-    /// <param name="ruleCode">规则编码（必填）</param>
+    /// <param name="ruleName">规则名称（必填）</param>
     /// <param name="hospitalCode">医院编码（可选，为空时表示全部机构）</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>新创建的任务ID</returns>
-    /// <exception cref="ArgumentException">规则编码为空时抛出</exception>
+    /// <exception cref="ArgumentException">规则名称为空时抛出</exception>
     [McpServerTool]
     [Description("创建审核任务，返回任务ID")]
     public async Task<string> CreateAuditTaskAsync(
-        [Description("规则编码（必填）")] string ruleCode,
+        [Description("规则名称（必填）")] string ruleName,
         [Description("医院编码（可选，为空时表示全部机构）")] string? hospitalCode = null,
         CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(ruleCode))
+        if (string.IsNullOrWhiteSpace(ruleName))
         {
-            throw new ArgumentException("规则编码不能为空", nameof(ruleCode));
+            throw new ArgumentException("规则名称不能为空", nameof(ruleName));
         }
 
         var taskId = Guid.NewGuid().ToString("N");
         var task = new AuditTask
         {
             TaskId = taskId,
-            RuleCode = ruleCode,
+            RuleName = ruleName,
             HospitalCode = hospitalCode,
             Status = TaskStatus.Pending,
             TotalCount = 0,
@@ -374,8 +373,8 @@ internal class AuditServerTools
 
         await _auditTaskRepository.SaveTaskAsync(task, cancellationToken);
 
-        _logger.LogInformation("已创建审核任务，任务ID: {TaskId}，规则编码: {RuleCode}，医院编码: {HospitalCode}",
-            taskId, ruleCode, hospitalCode ?? "全部");
+        _logger.LogInformation("已创建审核任务，任务ID: {TaskId}，规则名称: {RuleName}，医院编码: {HospitalCode}",
+            taskId, ruleName, hospitalCode ?? "全部");
 
         return taskId;
     }
@@ -412,7 +411,7 @@ internal class AuditServerTools
         return new AuditTaskStatusResponse
         {
             TaskId = task.TaskId,
-            RuleCode = task.RuleCode,
+            RuleName = task.RuleName,
             HospitalCode = task.HospitalCode,
             Status = task.Status.ToString(),
             TotalCount = task.TotalCount,
@@ -429,14 +428,14 @@ internal class AuditServerTools
     /// 查询审核结果
     /// </summary>
     /// <param name="taskId">任务ID（可选，按任务ID过滤）</param>
-    /// <param name="ruleCode">规则编码（可选，按规则编码过滤）</param>
+    /// <param name="ruleName">规则名称（可选，按规则名称过滤）</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>审核结果列表</returns>
     [McpServerTool]
-    [Description("查询审核结果，可按任务ID或规则编码过滤")]
+    [Description("查询审核结果，可按任务ID或规则名称过滤")]
     public async Task<IReadOnlyList<AuditResult>> QueryAuditResultsAsync(
         [Description("任务ID（可选，按任务ID过滤）")] string? taskId = null,
-        [Description("规则编码（可选，按规则编码过滤）")] string? ruleCode = null,
+        [Description("规则名称（可选，按规则名称过滤）")] string? ruleName = null,
         CancellationToken cancellationToken = default)
     {
         IReadOnlyList<AuditResult> results;
@@ -446,14 +445,14 @@ internal class AuditServerTools
             results = await _auditResultRepository.GetAuditResultsByTaskIdAsync(taskId, cancellationToken);
             _logger.LogInformation("按任务ID {TaskId} 查询到审核结果 {Count} 条", taskId, results.Count);
         }
-        else if (!string.IsNullOrWhiteSpace(ruleCode))
+        else if (!string.IsNullOrWhiteSpace(ruleName))
         {
-            results = await _auditResultRepository.GetAuditResultsByRuleCodeAsync(ruleCode, cancellationToken);
-            _logger.LogInformation("按规则编码 {RuleCode} 查询到审核结果 {Count} 条", ruleCode, results.Count);
+            results = await _auditResultRepository.GetAuditResultsByRuleNameAsync(ruleName, cancellationToken);
+            _logger.LogInformation("按规则名称 {RuleName} 查询到审核结果 {Count} 条", ruleName, results.Count);
         }
         else
         {
-            _logger.LogWarning("查询审核结果时未提供任务ID或规则编码，返回空列表");
+            _logger.LogWarning("查询审核结果时未提供任务ID或规则名称，返回空列表");
             return Array.Empty<AuditResult>();
         }
 
@@ -470,8 +469,8 @@ internal class AuditServerTools
         /// <summary>任务ID</summary>
         public string TaskId { get; set; } = string.Empty;
 
-        /// <summary>规则编码</summary>
-        public string RuleCode { get; set; } = string.Empty;
+        /// <summary>规则名称</summary>
+        public string RuleName { get; set; } = string.Empty;
 
         /// <summary>医院编码</summary>
         public string? HospitalCode { get; set; }
@@ -531,7 +530,7 @@ internal class AuditServerTools
             MedicalRecordNo = medicalRecordNo,
             HospitalCode = hospitalCode,
             InsuredNo = insuredNo,
-            RuleCode = ruleCode,
+            //RuleCode = ruleCode,
             Page = page,
             PageSize = pageSize,
         };

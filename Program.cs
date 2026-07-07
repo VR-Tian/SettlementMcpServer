@@ -1,9 +1,23 @@
+using System.Runtime.InteropServices;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Serilog;
 using SettlementMcpServer.Extensions;
 using SettlementMcpServer.Tools;
+
+// 设置工作目录为 exe 所在目录，确保原生 DLL（如 DuckDB）能被正确加载
+var exeDirectory = AppContext.BaseDirectory;
+Directory.SetCurrentDirectory(exeDirectory);
+
+// Windows 平台：添加 exe 目录到 DLL 搜索路径
+if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+{
+    SetDllDirectory(exeDirectory);
+}
+
+[DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+static extern bool SetDllDirectory(string lpPathName);
 
 var builder = Host.CreateApplicationBuilder(args);
 

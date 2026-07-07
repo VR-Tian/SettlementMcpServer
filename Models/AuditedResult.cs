@@ -23,9 +23,9 @@ public class AuditedResultQueryFilter : IPagedQuery
     /// <remarks>精确匹配，为空时忽略此条件。</remarks>
     public string? InsuredNo { get; set; }
 
-    /// <summary>规则编码（对应表字段: 规则编码）</summary>
+    /// <summary>规则名称（对应表字段: 规则名称）</summary>
     /// <remarks>精确匹配，为空时忽略此条件。</remarks>
-    public string? RuleCode { get; set; }
+    public string? RuleName { get; set; }
 
     /// <summary>
     /// 页码，从 1 开始
