@@ -74,18 +74,18 @@ public class RulePipeline : IRulePipeline
 
 
         // 将违规结果转换为审核结果并持久化
-        if (violations.Count > 0)
-        {
-            var taskId = Guid.NewGuid().ToString("N");
-            var auditResults = violations.Select(v => MapToAuditResult(v, taskId)).ToList();
+        // if (violations.Count > 0)
+        // {
+        //     var taskId = Guid.NewGuid().ToString("N");
+        //     var auditResults = violations.Select(v => MapToAuditResult(v, taskId)).ToList();
 
-            await _auditResultRepository.SaveAuditResultsAsync(auditResults, cancellationToken);
+        //     await _auditResultRepository.SaveAuditResultsAsync(auditResults, cancellationToken);
 
-            _logger.LogInformation(
-                "已将 {Count} 条审核结果保存到 DuckDB，任务ID: {TaskId}",
-                auditResults.Count,
-                taskId);
-        }
+        //     _logger.LogInformation(
+        //         "已将 {Count} 条审核结果保存到 DuckDB，任务ID: {TaskId}",
+        //         auditResults.Count,
+        //         taskId);
+        // }
 
         return violations;
     }

@@ -23,7 +23,7 @@ public sealed class RuleInitializationService : IRuleInitializationService
     /// <summary>
     /// 规则文件目录
     /// </summary>
-    private const string RulesDirectory = ".agents/skills";
+    private const string RulesDirectory = ".agents\\skills";
 
     /// <summary>
     /// 初始化规则初始化服务

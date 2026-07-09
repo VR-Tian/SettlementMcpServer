@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using MiniExcelLibs;
+using MiniExcelLibs.Attributes;
 using SettlementMcpServer.Contracts;
 using SettlementMcpServer.Models.Rules;
 
@@ -301,54 +302,74 @@ public sealed class FrequencyLimitExcelRuleLoader : IRuleLoader
     private sealed class FrequencyLimitRuleExcelRow
     {
         /// <summary>项目编码</summary>
+        [ExcelColumnName("项目编码")]
         public string ItemCode { get; set; }
 
         /// <summary>项目名称</summary>
+        [ExcelColumnName("项目名称")]
         public string ItemName { get; set; }
 
         /// <summary>时间间隔</summary>
         public string TimeInterval { get; set; }
 
         /// <summary>住院限定次数</summary>
-        public int? InpatientLimitCount { get; set; }
+        [ExcelColumnName("住院限定次数")]
+        public decimal? InpatientLimitCount { get; set; }
 
         /// <summary>门诊限定次数</summary>
-        public int? OutpatientLimitCount { get; set; }
+        [ExcelColumnName("门诊限定次数")]
+        public decimal? OutpatientLimitCount { get; set; }
 
         /// <summary>频次计算方式</summary>
+        [ExcelColumnName("频次计算方式")]
         public string FrequencyCalcMethod { get; set; }
 
         /// <summary>提示信息</summary>
+        [ExcelColumnName("提示信息")]
         public string PromptMessage { get; set; }
 
         /// <summary>住院天数算头算尾</summary>
+        [ExcelColumnName("住院天数算头算尾")]
         public bool? InpatientDaysIncludeBoth { get; set; }
 
         /// <summary>是否审核次数不足</summary>
+        [ExcelColumnName("是否审核次数不足")]
         public bool? CheckInsufficientCount { get; set; }
 
         /// <summary>是否总数违规</summary>
+        [ExcelColumnName("是否总数违规")]
         public bool? IsTotalViolation { get; set; }
 
         /// <summary>是否审核门诊及限定科室</summary>
+        [ExcelColumnName("是否审核门诊及限定科室")]
         public bool? CheckOutpatientAndDept { get; set; }
 
         /// <summary>是否审核住院及限定科室</summary>
+        [ExcelColumnName("是否审核住院及限定科室")]    
         public bool? CheckInpatientAndDept { get; set; }
 
         /// <summary>限定总金额</summary>
+        [ExcelColumnName("限定总金额")]    
         public decimal? LimitAmount { get; set; }
 
         /// <summary>是否审核同一个执行科室</summary>
+        /// <remarks>默认值为 false</remarks>
+        [ExcelColumnName("是否审核同一个执行科室")]
         public bool? CheckSameExecDept { get; set; }
 
         /// <summary>时间间隔类型</summary>
+        /// <remarks>默认值为 "天"</remarks>
+        [ExcelColumnName("时间间隔类型")]
         public string TimeIntervalType { get; set; }
 
         /// <summary>有效开始时间</summary>
+        /// <remarks>默认值为当前时间</remarks>
+        [ExcelColumnName("有效开始时间")]
         public DateTime? ValidStartDate { get; set; }
 
         /// <summary>有效结束时间</summary>
+        /// <remarks>默认值为当前时间</remarks>
+        [ExcelColumnName("有效结束时间")]
         public DateTime? ValidEndDate { get; set; }
     }
 }

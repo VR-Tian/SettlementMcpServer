@@ -105,11 +105,6 @@ public sealed class DuplicateChargeExecutor : IRuleExecutor
         CancellationToken cancellationToken)
     {
         var violations = new List<RuleViolation>();
-        _logger.LogDebug(
-            "开始执行跨组共存检测，规则ID {RuleName},A组项目数 {GroupACount}，B组项目数 {GroupBCount}",
-            ruleSet.RuleName,
-            rule.GroupAItems.Count,
-            rule.GroupBItems.Count);
         var groupedSettlements = GroupSettlements(rule, settlements);
 
         foreach (var (groupKey, groupSettlements) in groupedSettlements)

@@ -1,0 +1,2 @@
+[permissions]
+allow = ["mcp__unnamed_8e7c64__exec_audit_analysis", "mcp__unnamed_8e7c64__get_audited_result_count", "mcp__unnamed_8e7c64__export_audited_results_to_excel"]

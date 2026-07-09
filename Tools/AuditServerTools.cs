@@ -1,4 +1,7 @@
 using System.ComponentModel;
+using System.Text.Encodings.Web;
+using System.Text.Json;
+using System.Text.Unicode;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using ModelContextProtocol.Server;
@@ -224,7 +227,7 @@ internal class AuditServerTools
     /// </para>
     /// </remarks>
     [McpServerTool]
-    [Description("根据查询条件获取医保审核结果，保存到本机临时文件夹并返回文件路径")]
+    [Description("根据查询条件获取医保审核结果，")]
     public async Task<string> ExportAuditedResultsToExcelAsync(
         [Description("病案号（可选）")] string? medicalRecordNo = null,
         [Description("医院编码（可选）")] string? hospitalCode = null,
@@ -252,7 +255,7 @@ internal class AuditServerTools
     #region  规则内涵执行审核服务
 
     /// <summary>
-    /// 根据规则名称从数据库加载规则并审核医保数据，分析结果保存到本机临时文件夹并返回文件路径
+    /// 根据规则名称从数据库加载规则并审核医保数据，分析结果
     /// </summary>
     /// <param name="ruleName">规则名称（必填，用于从数据库加载规则集）</param>
     /// <param name="hospitalCode">医院编码（可选，按定点医药机构编号过滤结算数据）</param>
@@ -261,7 +264,7 @@ internal class AuditServerTools
     /// <exception cref="ArgumentException">规则名称为空时抛出</exception>
     /// <exception cref="InvalidOperationException">数据库中未找到对应规则时抛出</exception>
     [McpServerTool]
-    [Description("根据规则名称从数据库加载规则审核医保数据，分析结果保存到本机临时文件夹并返回文件路径")]
+    [Description("根据规则名称从数据库加载规则审核医保数据，返回分析结果")]
     public async Task<string> ExecAuditAnalysisAsync(
         [Description("规则名称")] string? ruleName = null,
         [Description("医院编码（可选）")] string? hospitalCode = null,
@@ -320,15 +323,20 @@ internal class AuditServerTools
         _logger.LogInformation("规则审核完成，发现 {Count} 条违规记录", violations.Count);
 
         // 5. 将违规结果导出为Excel
-        var auditedResults = violations.Select(MapToAuditedResult).ToList();
-        var excelFilePath = await _excelExportService.ExportAuditedResultsToExcelAsync(
-            auditedResults,
-            $"规则{ruleName}审核结果",
-            cancellationToken);
+        // var auditedResults = violations.Select(MapToAuditedResult).ToList();
+        // var excelFilePath = await _excelExportService.ExportAuditedResultsToExcelAsync(
+        //     auditedResults,
+        //     $"规则{ruleName}审核结果",
+        //     cancellationToken);
 
-        _logger.LogInformation("违规结果已导出到Excel文件: {FilePath}", excelFilePath);
-
-        return excelFilePath;
+        // _logger.LogInformation("违规结果已导出到Excel文件: {FilePath}", excelFilePath);
+        var options = new JsonSerializerOptions
+        {
+            WriteIndented = false,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            Encoder = JavaScriptEncoder.Create(UnicodeRanges.All)
+        };
+        return JsonSerializer.Serialize(violations, options);
     }
 
     /// <summary>

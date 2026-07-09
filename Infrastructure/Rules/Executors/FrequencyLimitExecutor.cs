@@ -112,8 +112,8 @@ public sealed class FrequencyLimitExecutor : IRuleExecutor
         var groupedByVisit = settlements
             .Where(s => !string.IsNullOrEmpty(s.PersonnelNo) &&
                         !string.IsNullOrEmpty(s.VisitId) &&
-                        !string.IsNullOrEmpty(s.InsuranceCatalogCode) &&
-                        itemCodes.Contains(s.InsuranceCatalogCode))
+                        !string.IsNullOrEmpty(s.MedicalCatalogCode) &&
+                        itemCodes.Contains(s.MedicalCatalogCode))
             .GroupBy(s => new { s.PersonnelNo, s.VisitId });
 
         foreach (var visitGroup in groupedByVisit)
@@ -138,7 +138,7 @@ public sealed class FrequencyLimitExecutor : IRuleExecutor
                 {
                     if (!violations.Any(v => v.PersonnelNo == settlement.PersonnelNo &&
                                             v.FeeOccurrenceDate == feeDate &&
-                                            v.ViolationItemCode == settlement.InsuranceCatalogCode))
+                                            v.ViolationItemCode == settlement.MedicalCatalogCode))
                     {
                         violations.Add(CreateViolation(ruleSet, rule, settlement, feeDate));
                     }
@@ -158,7 +158,7 @@ public sealed class FrequencyLimitExecutor : IRuleExecutor
                 {
                     if (!violations.Any(v => v.PersonnelNo == settlement.PersonnelNo &&
                                             v.FeeOccurrenceDate == feeDate &&
-                                            v.ViolationItemCode == settlement.InsuranceCatalogCode))
+                                            v.ViolationItemCode == settlement.MedicalCatalogCode))
                     {
                         violations.Add(CreateViolation(ruleSet, rule, settlement, feeDate));
                     }
@@ -188,8 +188,8 @@ public sealed class FrequencyLimitExecutor : IRuleExecutor
         // 按人员编号分组
         var groupedByPerson = settlements
             .Where(s => !string.IsNullOrEmpty(s.PersonnelNo) &&
-                        !string.IsNullOrEmpty(s.InsuranceCatalogCode) &&
-                        itemCodes.Contains(s.InsuranceCatalogCode))
+                        !string.IsNullOrEmpty(s.MedicalCatalogCode) &&
+                        itemCodes.Contains(s.MedicalCatalogCode))
             .GroupBy(s => s.PersonnelNo);
 
         foreach (var personGroup in groupedByPerson)
@@ -222,7 +222,6 @@ public sealed class FrequencyLimitExecutor : IRuleExecutor
                     });
 
                 var feeDate = ExtractDate(settlement.FeeOccurrenceTime);
-
                 // 判断住院限定
                 if (rule.InpatientLimitCount.HasValue && countInWindow > rule.InpatientLimitCount.Value)
                 {
@@ -235,7 +234,7 @@ public sealed class FrequencyLimitExecutor : IRuleExecutor
 
                     if (!violations.Any(v => v.PersonnelNo == settlement.PersonnelNo &&
                                             v.FeeOccurrenceDate == feeDate &&
-                                            v.ViolationItemCode == settlement.InsuranceCatalogCode))
+                                            v.ViolationItemCode == settlement.MedicalCatalogCode))
                     {
                         violations.Add(CreateViolation(ruleSet, rule, settlement, feeDate));
                     }
@@ -252,7 +251,7 @@ public sealed class FrequencyLimitExecutor : IRuleExecutor
 
                     if (!violations.Any(v => v.PersonnelNo == settlement.PersonnelNo &&
                                             v.FeeOccurrenceDate == feeDate &&
-                                            v.ViolationItemCode == settlement.InsuranceCatalogCode))
+                                            v.ViolationItemCode == settlement.MedicalCatalogCode))
                     {
                         violations.Add(CreateViolation(ruleSet, rule, settlement, feeDate));
                     }
@@ -298,8 +297,8 @@ public sealed class FrequencyLimitExecutor : IRuleExecutor
         // 按人员编号分组
         var groupedByPerson = settlements
             .Where(s => !string.IsNullOrEmpty(s.PersonnelNo) &&
-                        !string.IsNullOrEmpty(s.InsuranceCatalogCode) &&
-                        itemCodes.Contains(s.InsuranceCatalogCode))
+                        !string.IsNullOrEmpty(s.MedicalCatalogCode) &&
+                        itemCodes.Contains(s.MedicalCatalogCode))
             .GroupBy(s => s.PersonnelNo);
 
         foreach (var personGroup in groupedByPerson)
@@ -345,7 +344,7 @@ public sealed class FrequencyLimitExecutor : IRuleExecutor
 
                     if (!violations.Any(v => v.PersonnelNo == settlement.PersonnelNo &&
                                             v.FeeOccurrenceDate == feeDate &&
-                                            v.ViolationItemCode == settlement.InsuranceCatalogCode))
+                                            v.ViolationItemCode == settlement.MedicalCatalogCode))
                     {
                         violations.Add(CreateViolation(ruleSet, rule, settlement, feeDate));
                     }
@@ -362,7 +361,7 @@ public sealed class FrequencyLimitExecutor : IRuleExecutor
 
                     if (!violations.Any(v => v.PersonnelNo == settlement.PersonnelNo &&
                                             v.FeeOccurrenceDate == feeDate &&
-                                            v.ViolationItemCode == settlement.InsuranceCatalogCode))
+                                            v.ViolationItemCode == settlement.MedicalCatalogCode))
                     {
                         violations.Add(CreateViolation(ruleSet, rule, settlement, feeDate));
                     }
@@ -441,7 +440,7 @@ public sealed class FrequencyLimitExecutor : IRuleExecutor
             InstitutionName = settlement.InstitutionName ?? string.Empty,
             GroupCodeA = rule.ItemCode,
             GroupCodeB = string.Empty,
-            ViolationItemCode = settlement.InsuranceCatalogCode ?? string.Empty,
+            ViolationItemCode = settlement.MedicalCatalogCode ?? string.Empty,
             ViolationItemName = settlement.InsuranceCatalogName ?? string.Empty,
             ViolationQuantity = settlement.Quantity,
             ViolationUnitPrice = settlement.UnitPrice,

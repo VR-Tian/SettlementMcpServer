@@ -47,10 +47,10 @@ public class FrequencyLimitRule
     public int TimeInterval { get; set; }
 
     /// <summary>住院限定次数</summary>
-    public int? InpatientLimitCount { get; set; }
+    public decimal? InpatientLimitCount { get; set; }
 
     /// <summary>门诊限定次数</summary>
-    public int? OutpatientLimitCount { get; set; }
+    public decimal? OutpatientLimitCount { get; set; }
 
     /// <summary>频次计算方式</summary>
     public string FrequencyCalcMethod { get; set; } = string.Empty;

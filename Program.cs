@@ -56,6 +56,7 @@ builder.Services
     .WithTools<DuckDbQueryTools>();
     //.WithTools<SettlementTools>();
 
+
 // 注册审核数据访问服务（连接字符串通过环境变量 ORACLE_CONNECTION_STRING 延迟读取）
 builder.Services.AddOracleDataAccess("ORACLE_CONNECTION_STRING");
 
@@ -72,13 +73,17 @@ builder.Services.AddDuckDbServices();
 // 注册重复收费规则引擎服务（规则加载器、四种规则执行器、规则管道）
 builder.Services.AddRuleEngine();
 
-// ========================================
+//注册JsonSerializer序列化格式选项
+builder.Services.AddJsonSerializerOptions();
+
+//// ========================================
 // 启动运行
 // ========================================
 // Build() 构建完整的 DI 容器和 Host
 var app = builder.Build();
 
 // 初始化规则数据（从 Excel 扫描并写入 DuckDB）
+// 此操作在应用启动时执行一次，后续请求从 DuckDB 中读取
 try
 {
     using var scope = app.Services.CreateScope();

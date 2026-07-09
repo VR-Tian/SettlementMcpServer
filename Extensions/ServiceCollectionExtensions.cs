@@ -1,3 +1,6 @@
+using System.Text.Encodings.Web;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Extensions.DependencyInjection;
 using SettlementMcpServer.Contracts;
 using SettlementMcpServer.Infrastructure;
@@ -112,7 +115,7 @@ public static class ServiceCollectionExtensions
         {
             var duplicateChargeLoader = sp.GetRequiredService<DuplicateChargeExcelRuleLoader>();
             var frequencyLimitLoader = sp.GetRequiredService<FrequencyLimitExcelRuleLoader>();
-            
+
             // 返回一个复合加载器，根据规则类别自动选择
             return new CompositeRuleLoader(new IRuleLoader[] { duplicateChargeLoader, frequencyLimitLoader });
         });
@@ -135,6 +138,21 @@ public static class ServiceCollectionExtensions
         // 注册审核任务处理器（Transient 生命周期，每次请求创建新实例）
         services.AddTransient<AuditTaskProcessor>();
 
+        return services;
+    }
+
+    public static IServiceCollection AddJsonSerializerOptions(this IServiceCollection services)
+    {
+        services.AddSingleton(new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            WriteIndented = false,
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+            ReferenceHandler = ReferenceHandler.Preserve,
+            MaxDepth = 256,
+            AllowTrailingCommas = false, // MCP标准不允许尾逗号
+            NumberHandling = JsonNumberHandling.Strict
+        });
         return services;
     }
 }
