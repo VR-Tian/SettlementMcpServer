@@ -1,24 +1,33 @@
 # 医保结算审核 MCP Server
 
-基于 .NET 10 构建的医保结算数据审核 MCP 服务器，支持多规则组合审核，自动生成违规报告，提供规则引擎审核、数据同步、多维度分析等功能。
+基于 .NET 10 构建的医保结算数据审核 MCP 服务器，支持多规则组合审核，自动生成违规报告，提供规则引擎审核、数据同步、多维度分析等功能。面向医保结算数据审核场景，支持自定义规则组合，实现对医保结算数据的批量审核和违规报告生成，在医保飞行检查任务现场展示审核结果和违规报告。
+
+\##数据格式要求
+
+- **清洗医保结算数据**：准备阶段把从 Oracle 数据库同步DuckDB专用离线数据库，格式为 Parquet 文件
+- **规则文件**：规则内涵组成的Excel 文件，包含审核规则的定义
+- **违规报告**：统一输出关于违规结果的Excel 文件，包含审核结果和违规详情
 
 ## 功能特性
 
 ### 1. 规则引擎审核
+
 - **规则管道**：自定义支持多种规则类型
 
-
 ### 2. 数据同步与存储
+
 - 从 Oracle 数据库同步医保结算数据到 DuckDB
 - 使用 Parquet 格式存储，支持高性能列式查询
 - 自动创建索引和优化查询性能
 
 ### 3. 多维度分析
+
 - 提供预定义分析维度（按机构、科室、时间、项目等）
 - 支持自定义 SQL 查询（DuckDB 语法）
 - 分析结果可导出为 Excel 文件
 
 ### 4. 审核结果管理
+
 - 分页查询审核结果
 - 批量导出 Excel 报告
 - 支持按规则类别、违规类型筛选
@@ -26,12 +35,14 @@
 ## 技术架构
 
 ### 核心组件
+
 - **MCP Server**：基于 ModelContextProtocol C# SDK，使用 stdio 传输
 - **数据库**：Oracle（源数据）+ DuckDB（分析存储）
 - **规则引擎**：管道-过滤器架构，策略模式实现规则执行器
 - **日志系统**：Serilog 文件日志，按日滚动，保留 7 天
 
 ### 项目结构
+
 ```
 SettlementMcpServer/
 ├── Contracts/          # 接口定义层
@@ -55,6 +66,7 @@ SettlementMcpServer/
 ## 配置说明
 
 ### 环境变量
+
 ```bash
 # Oracle 数据库连接字符串（审核数据源）
 ORACLE_CONNECTION_STRING="Data Source=...;User Id=...;Password=..."
@@ -64,7 +76,9 @@ _SETTLEMENT_ORACLE_CONNECTION_STRING="Data Source=...;User Id=...;Password=..."
 ```
 
 ### 规则文件
+
 规则 Excel 文件存放在 `.agents/skills/` 目录下：
+
 - `重复收费规则/130301规则内涵.xlsx`
 - `限定频次/限定频次120501.xlsx`
 
@@ -73,23 +87,28 @@ _SETTLEMENT_ORACLE_CONNECTION_STRING="Data Source=...;User Id=...;Password=..."
 ## 本地开发
 
 ### 1. 克隆项目
+
 ```bash
 git clone <repository-url>
 cd SettlementMcpServer
 ```
 
 ### 2. 配置环境变量
+
 设置 Oracle 数据库连接字符串（见上文配置说明）。
 
 ### 3. 运行项目
+
 ```bash
 dotnet run
 ```
 
 ### 4. 配置 MCP 客户端
+
 在 IDE 中配置 MCP 服务器连接：
 
 **VS Code** (`.vscode/mcp.json`):
+
 ```json
 {
   "servers": {
@@ -107,6 +126,7 @@ dotnet run
 ```
 
 **Visual Studio** (`.mcp.json`):
+
 ```json
 {
   "servers": {
@@ -126,20 +146,24 @@ dotnet run
 ## MCP 工具列表
 
 ### AuditServerTools（审核服务）
+
 - `exec_audit_analysis`：执行规则审核分析
 - `get_audited_result_count`：获取审核结果总数
 - `query_audited_results`：分页查询审核结果
 - `export_audited_results_to_excel`：导出审核结果为 Excel
 
 ### SyncDataToDuckDbTools（数据同步）
+
 - `sync__settlement_data`：同步医保结算数据到 DuckDB
 - `sync_audited_result_data`：同步审核结果数据到 DuckDB
 
 ### AnalysisDimensionTools（分析维度）
+
 - `get_available_analysis_dimensions`：获取可用分析维度列表
 - `get_analysis_sql`：获取指定维度的 SQL 查询模板
 
 ### DuckDbQueryTools（查询执行）
+
 - `execute_duck_db_query`：执行 DuckDB SQL 查询
 
 ## 发布 NuGet 包
@@ -151,12 +175,10 @@ dotnet run
    <Authors>YourName</Authors>
    <Description>医保结算审核 MCP 服务器</Description>
    ```
-
 2. 打包项目：
    ```bash
    dotnet pack -c Release
    ```
-
 3. 发布到 NuGet.org：
    ```bash
    dotnet nuget push bin/Release/*.nupkg --api-key <your-api-key> --source https://api.nuget.org/v3/index.json
@@ -186,6 +208,7 @@ dotnet run
 ## 日志位置
 
 日志文件存储在系统临时目录：
+
 - Windows: `%TEMP%\SettlementMcpServer\logs\`
 - Linux/macOS: `/tmp/SettlementMcpServer/logs/`
 
