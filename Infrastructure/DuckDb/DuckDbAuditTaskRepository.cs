@@ -38,8 +38,7 @@ public sealed class DuckDbAuditTaskRepository : IAuditTaskRepository
 
         _logger.LogInformation("保存审核任务 {TaskId}，规则名称: {RuleName}", task.TaskId, task.RuleName);
 
-        using var connection = _connectionFactory.CreateConnection();
-        connection.Open();
+        var connection = _connectionFactory.CreateConnection();
 
         await EnsureTableExistsAsync(connection, cancellationToken);
 
@@ -71,8 +70,7 @@ public sealed class DuckDbAuditTaskRepository : IAuditTaskRepository
 
         _logger.LogInformation("更新任务 {TaskId} 状态为 {Status}", taskId, status);
 
-        using var connection = _connectionFactory.CreateConnection();
-        connection.Open();
+        var connection = _connectionFactory.CreateConnection();
 
         await EnsureTableExistsAsync(connection, cancellationToken);
 
@@ -104,8 +102,7 @@ public sealed class DuckDbAuditTaskRepository : IAuditTaskRepository
 
         _logger.LogDebug("查询任务 {TaskId}", taskId);
 
-        using var connection = _connectionFactory.CreateConnection();
-        connection.Open();
+        var connection = _connectionFactory.CreateConnection();
 
         await EnsureTableExistsAsync(connection, cancellationToken);
 
@@ -125,8 +122,7 @@ public sealed class DuckDbAuditTaskRepository : IAuditTaskRepository
 
         _logger.LogDebug("根据规则名称查询任务: {RuleName}", ruleName);
 
-        using var connection = _connectionFactory.CreateConnection();
-        connection.Open();
+        var connection = _connectionFactory.CreateConnection();
 
         await EnsureTableExistsAsync(connection, cancellationToken);
 

@@ -26,4 +26,16 @@ public interface IDataSyncService
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>同步结果，包含记录数和文件路径</returns>
     Task<DataSyncResult> SyncAuditedResultsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 恢复 DuckDB 视图（从已有的 Parquet 文件重新注册视图）
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// DuckDB 的 VIEW 是临时的，程序重启后需要重新注册。
+    /// 此方法扫描数据目录下已有的 Parquet 文件，重新注册为可查询视图。
+    /// </para>
+    /// </remarks>
+    /// <param name="cancellationToken">取消令牌</param>
+    Task RestoreViewsAsync(CancellationToken cancellationToken = default);
 }

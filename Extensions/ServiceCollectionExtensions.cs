@@ -75,6 +75,9 @@ public static class ServiceCollectionExtensions
         // 注册审核任务仓储
         services.AddSingleton<IAuditTaskRepository, DuckDbAuditTaskRepository>();
 
+        // 注册 DuckDB 结算数据仓储（用于规则执行时从 DuckDB 查询结算数据）
+        services.AddSingleton<DuckDbSettlementDataRepository>();
+
         return services;
     }
 

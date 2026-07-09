@@ -156,7 +156,7 @@ public sealed class FrequencyLimitExcelRuleLoader : IRuleLoader
             CheckInpatientAndDept = row.CheckInpatientAndDept,
             LimitAmount = row.LimitAmount,
             CheckSameExecDept = row.CheckSameExecDept,
-            TimeIntervalType = row.TimeIntervalType?.Trim() ?? string.Empty,
+            TimeIntervalType = ParseTimeIntervalType(row.TimeIntervalType),
             ValidStartDate = row.ValidStartDate,
             ValidEndDate = row.ValidEndDate,
             ItemCodes = ParseItemCodes(itemCode)
@@ -184,6 +184,41 @@ public sealed class FrequencyLimitExcelRuleLoader : IRuleLoader
     }
 
     #region 类型转换辅助方法
+
+    /// <summary>
+    /// 解析时间间隔类型枚举
+    /// </summary>
+    /// <param name="value">时间间隔类型值</param>
+    /// <returns>时间间隔类型枚举</returns>
+    private static TimeIntervalType ParseTimeIntervalType(object? value)
+    {
+        if (value == null)
+        {
+            return TimeIntervalType.OneVisit;
+        }
+
+        if (value is int intValue)
+        {
+            return (TimeIntervalType)intValue;
+        }
+
+        if (value is long longValue)
+        {
+            return (TimeIntervalType)(int)longValue;
+        }
+
+        if (value is double doubleValue)
+        {
+            return (TimeIntervalType)(int)doubleValue;
+        }
+
+        if (value is string strValue && int.TryParse(strValue, out var parsed))
+        {
+            return (TimeIntervalType)parsed;
+        }
+
+        return TimeIntervalType.OneVisit;
+    }
 
     private static int ConvertToInt(object? value)
     {

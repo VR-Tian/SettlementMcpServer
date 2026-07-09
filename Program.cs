@@ -7,17 +7,17 @@ using SettlementMcpServer.Extensions;
 using SettlementMcpServer.Tools;
 
 // 设置工作目录为 exe 所在目录，确保原生 DLL（如 DuckDB）能被正确加载
-var exeDirectory = AppContext.BaseDirectory;
-Directory.SetCurrentDirectory(exeDirectory);
+// var exeDirectory = AppContext.BaseDirectory;
+// Directory.SetCurrentDirectory(exeDirectory);
 
-// Windows 平台：添加 exe 目录到 DLL 搜索路径
-if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-{
-    SetDllDirectory(exeDirectory);
-}
+// // Windows 平台：添加 exe 目录到 DLL 搜索路径
+// if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+// {
+//     SetDllDirectory(exeDirectory);
+// }
 
-[DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-static extern bool SetDllDirectory(string lpPathName);
+// [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+// static extern bool SetDllDirectory(string lpPathName);
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -59,8 +59,8 @@ builder.Services
 // 注册审核数据访问服务（连接字符串通过环境变量 ORACLE_CONNECTION_STRING 延迟读取）
 builder.Services.AddOracleDataAccess("ORACLE_CONNECTION_STRING");
 
-// 注册医保结算数据访问服务（连接字符串通过环境变量 _SETTLEMENT_ORACLE_CONNECTION_STRING 延迟读取）
-builder.Services.AddSettlementDataAccess("_SETTLEMENT_ORACLE_CONNECTION_STRING");
+// 注册医保结算数据访问服务（连接字符串通过环境变量 SETTLEMENT_ORACLE_CONNECTION_STRING 延迟读取）
+builder.Services.AddSettlementDataAccess("SETTLEMENT_ORACLE_CONNECTION_STRING");
 
 // 注册 Excel 导出服务
 // 此扩展方法内部注册了 IExcelExportService → MiniExcelExportService 映射
@@ -90,6 +90,19 @@ catch (Exception ex)
     Log.Fatal(ex, "规则初始化失败，应用程序将退出");
     await app.StopAsync();
     return;
+}
+
+// 恢复 DuckDB 视图（从已有的 Parquet 文件重新注册视图）
+// DuckDB 的 VIEW 是临时的，程序重启后需要重新注册
+try
+{
+    using var scope = app.Services.CreateScope();
+    var dataSyncService = scope.ServiceProvider.GetRequiredService<SettlementMcpServer.Contracts.IDataSyncService>();
+    await dataSyncService.RestoreViewsAsync();
+}
+catch (Exception ex)
+{
+    Log.Warning(ex, "恢复 DuckDB 视图失败，数据同步功能可能不可用");
 }
 
 // RunAsync() 启动 Host 并开始处理 MCP 请求（阻塞直到应用停止）

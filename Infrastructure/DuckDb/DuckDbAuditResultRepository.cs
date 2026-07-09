@@ -53,8 +53,7 @@ public sealed class DuckDbAuditResultRepository : IAuditResultRepository
 
         _logger.LogInformation("开始保存 {Count} 条审核结果到 DuckDB", resultList.Count);
 
-        using var connection = _connectionFactory.CreateConnection();
-        connection.Open();
+        var connection = _connectionFactory.CreateConnection();
 
         // 确保表存在
         await EnsureTableExistsAsync(connection, cancellationToken);
@@ -108,8 +107,7 @@ public sealed class DuckDbAuditResultRepository : IAuditResultRepository
 
         _logger.LogDebug("根据任务ID查询审核结果: {TaskId}", taskId);
 
-        using var connection = _connectionFactory.CreateConnection();
-        connection.Open();
+        var connection = _connectionFactory.CreateConnection();
 
         await EnsureTableExistsAsync(connection, cancellationToken);
 
@@ -129,8 +127,7 @@ public sealed class DuckDbAuditResultRepository : IAuditResultRepository
 
         _logger.LogDebug("根据规则名称查询审核结果: {RuleName}", ruleName);
 
-        using var connection = _connectionFactory.CreateConnection();
-        connection.Open();
+        var connection = _connectionFactory.CreateConnection();
 
         await EnsureTableExistsAsync(connection, cancellationToken);
 

@@ -1,3 +1,6 @@
+using System.Text.Encodings.Web;
+using System.Text.Json;
+using System.Text.Unicode;
 using Microsoft.Extensions.Logging;
 using SettlementMcpServer.Contracts;
 using SettlementMcpServer.Models;
@@ -10,20 +13,20 @@ namespace SettlementMcpServer.Infrastructure.Rules;
 /// </summary>
 public class RulePipeline : IRulePipeline
 {
-    private readonly IRuleLoader _ruleLoader;
+    private readonly IRuleRepository _ruleRepository;
     private readonly IEnumerable<IRuleExecutor> _executors;
     private readonly IAuditResultRepository _auditResultRepository;
     private readonly IRuleCombinationExecutor _ruleCombinationExecutor;
     private readonly ILogger<RulePipeline> _logger;
 
     public RulePipeline(
-        IRuleLoader ruleLoader,
+        IRuleRepository ruleRepository,
         IEnumerable<IRuleExecutor> executors,
         IAuditResultRepository auditResultRepository,
         IRuleCombinationExecutor ruleCombinationExecutor,
         ILogger<RulePipeline> logger)
     {
-        _ruleLoader = ruleLoader;
+        _ruleRepository = ruleRepository;
         _executors = executors;
         _auditResultRepository = auditResultRepository;
         _ruleCombinationExecutor = ruleCombinationExecutor;
@@ -38,7 +41,11 @@ public class RulePipeline : IRulePipeline
     {
         _logger.LogInformation("开始执行规则管道，规则名称: {RuleName}", ruleName);
 
-        var ruleSet = await _ruleLoader.LoadRuleSetAsync(ruleName, cancellationToken);
+        var ruleSet = await _ruleRepository.GetRuleSetByNameAsync(ruleName, cancellationToken);
+        if (ruleSet is null)
+        {
+            throw new InvalidOperationException($"规则 {ruleName} 不存在");
+        }
 
         var executor = _executors.FirstOrDefault(e => e.SupportedCategory == ruleSet.Category);
         if (executor is null)
@@ -53,11 +60,18 @@ public class RulePipeline : IRulePipeline
             ruleSet.Category);
 
         var violations = await executor.ExecuteAsync(ruleSet, settlements, cancellationToken);
-
+        var options = new JsonSerializerOptions
+        {
+            WriteIndented = false,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            Encoder = JavaScriptEncoder.Create(UnicodeRanges.All)
+        };
         _logger.LogInformation(
-            "规则管道执行完成，规则名称: {RuleName}，发现违规数量: {ViolationCount}",
+            "规则管道执行完成，规则名称: {RuleName}，发现违规数量: {ViolationCount}，违规结构JSON: {ViolationJson}",
             ruleName,
-            violations.Count);
+            violations.Count,
+            JsonSerializer.Serialize(violations, options));
+
 
         // 将违规结果转换为审核结果并持久化
         if (violations.Count > 0)
@@ -88,11 +102,15 @@ public class RulePipeline : IRulePipeline
             combination.CombinationCode,
             combination.CombinationName);
 
-        // 根据规则名称列表加载规则集
+        // 根据规则名称列表从 DuckDB 加载规则集
         var ruleSets = new List<IRuleSet>();
         foreach (var ruleName in ruleNames)
         {
-            var ruleSet = await _ruleLoader.LoadRuleSetAsync(ruleName, cancellationToken);
+            var ruleSet = await _ruleRepository.GetRuleSetByNameAsync(ruleName, cancellationToken);
+            if (ruleSet is null)
+            {
+                throw new InvalidOperationException($"规则 {ruleName} 不存在");
+            }
             ruleSets.Add(ruleSet);
         }
 

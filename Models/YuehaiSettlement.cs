@@ -8,7 +8,11 @@ namespace SettlementMcpServer.Models;
 /// </summary>
 public class SettlementQueryFilter : IPagedQuery
 {
+    
     public string? VisitId { get; set; }
+    /// <summary>
+    /// 结算ID（可选，精确匹配）
+    /// </summary>
     public string? SettlementId { get; set; }
     public string? PersonnelNo { get; set; }
     public string? MedicalRecordNo { get; set; }

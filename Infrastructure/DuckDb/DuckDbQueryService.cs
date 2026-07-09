@@ -45,8 +45,7 @@ public sealed class DuckDbQueryService : IDuckDbQueryService
 
         _logger.LogDebug("执行 DuckDB 查询: {Sql}", sql);
 
-        using var connection = _connectionFactory.CreateConnection();
-        connection.Open();
+        var connection = _connectionFactory.CreateConnection();
 
         using var command = connection.CreateCommand();
         command.CommandText = sql;
@@ -84,8 +83,7 @@ public sealed class DuckDbQueryService : IDuckDbQueryService
     {
         try
         {
-            using var connection = _connectionFactory.CreateConnection();
-            connection.Open();
+            var connection = _connectionFactory.CreateConnection();
 
             // 检查是否存在 _settlements 或 audited_results 视图
             using var command = connection.CreateCommand();

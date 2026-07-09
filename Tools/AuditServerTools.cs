@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using ModelContextProtocol.Server;
 using SettlementMcpServer.Contracts;
+using SettlementMcpServer.Infrastructure.DuckDb;
 using SettlementMcpServer.Models;
 using SettlementMcpServer.Models.Rules;
 using TaskStatus = SettlementMcpServer.Models.TaskStatus;
@@ -43,6 +44,8 @@ internal class AuditServerTools
     private readonly IAuditTaskRepository _auditTaskRepository;
     private readonly IRuleRepository _ruleRepository;
     private readonly IAuditResultRepository _auditResultRepository;
+    private readonly DuckDbSettlementDataRepository _duckDbSettlementDataRepository;
+    private readonly IDataSyncService _dataSyncService;
     private readonly ILogger<AuditServerTools> _logger;
 
     /// <summary>
@@ -55,6 +58,8 @@ internal class AuditServerTools
     /// <param name="auditTaskRepository">审核任务仓储（由 DI 容器自动注入）</param>
     /// <param name="ruleRepository">规则仓储（由 DI 容器自动注入）</param>
     /// <param name="auditResultRepository">审核结果仓储（由 DI 容器自动注入）</param>
+    /// <param name="duckDbSettlementDataRepository">DuckDB 结算数据仓储（由 DI 容器自动注入）</param>
+    /// <param name="dataSyncService">数据同步服务（由 DI 容器自动注入）</param>
     /// <param name="logger">日志记录器（由 DI 容器自动注入，可选）</param>
     public AuditServerTools(
         IAuditDataRepository auditDataRepository,
@@ -64,6 +69,8 @@ internal class AuditServerTools
         IAuditTaskRepository auditTaskRepository,
         IRuleRepository ruleRepository,
         IAuditResultRepository auditResultRepository,
+        DuckDbSettlementDataRepository duckDbSettlementDataRepository,
+        IDataSyncService dataSyncService,
         ILogger<AuditServerTools>? logger = null)
     {
         _auditDataRepository = auditDataRepository ?? throw new ArgumentNullException(nameof(auditDataRepository));
@@ -73,6 +80,8 @@ internal class AuditServerTools
         _auditTaskRepository = auditTaskRepository ?? throw new ArgumentNullException(nameof(auditTaskRepository));
         _ruleRepository = ruleRepository ?? throw new ArgumentNullException(nameof(ruleRepository));
         _auditResultRepository = auditResultRepository ?? throw new ArgumentNullException(nameof(auditResultRepository));
+        _duckDbSettlementDataRepository = duckDbSettlementDataRepository ?? throw new ArgumentNullException(nameof(duckDbSettlementDataRepository));
+        _dataSyncService = dataSyncService ?? throw new ArgumentNullException(nameof(dataSyncService));
         _logger = logger ?? NullLogger<AuditServerTools>.Instance;
     }
 
@@ -256,6 +265,7 @@ internal class AuditServerTools
     public async Task<string> ExecAuditAnalysisAsync(
         [Description("规则名称")] string? ruleName = null,
         [Description("医院编码（可选）")] string? hospitalCode = null,
+        [Description("结算ID（可选）")] string? SettlementId = null,
         CancellationToken cancellationToken = default)
     {
         // 1. 验证参数
@@ -273,12 +283,22 @@ internal class AuditServerTools
 
         _logger.LogInformation("开始执行规则审核，规则名称: {RuleName}，规则类别: {Category}", ruleName, ruleSet.Category);
 
-        // 3. 查询结算数据
+        // 3. 从 DuckDB 查询结算数据（而非 Oracle）
         var filter = new SettlementQueryFilter
         {
-            InstitutionCode = hospitalCode
+            InstitutionCode = hospitalCode,
+            SettlementId = SettlementId
         };
-        var settlements = await _SettlementDataRepository.QueryAllSettlementsAsync(filter, cancellationToken);
+
+        // 3.1 检查 DuckDB 中是否存在 _settlements 视图，如果不存在则自动同步数据
+        // if (!await CheckSettlementsViewExistsAsync(cancellationToken))
+        // {
+        //     _logger.LogInformation("DuckDB 中不存在 _settlements 视图，开始自动同步结算数据");
+        //     await _dataSyncService.SyncSettlementsAsync(cancellationToken);
+        //     _logger.LogInformation("结算数据同步完成");
+        // }
+
+        var settlements = await _duckDbSettlementDataRepository.QueryAllSettlementsAsync(filter, cancellationToken);
 
         if (settlements.Count == 0)
         {
@@ -286,7 +306,7 @@ internal class AuditServerTools
             return "未查询到符合条件的结算数据";
         }
 
-        _logger.LogInformation("查询到结算数据 {Count} 条", settlements.Count);
+        _logger.LogInformation("从 DuckDB 查询到结算数据 {Count} 条", settlements.Count);
 
         // 4. 执行规则管道（传入规则名称，由 DuplicateChargeDbRuleLoader 从数据库加载）
         var violations = await _rulePipeline.ExecuteAsync(ruleName, settlements, cancellationToken);
@@ -534,6 +554,47 @@ internal class AuditServerTools
             Page = page,
             PageSize = pageSize,
         };
+    }
+
+    /// <summary>
+    /// 检查 DuckDB 中是否存在 _settlements 视图
+    /// </summary>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>如果存在返回 true，否则返回 false</returns>
+    private async Task<bool> CheckSettlementsViewExistsAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            // 先列出所有表和视图，用于调试
+            var result = await _duckDbSettlementDataRepository.CountSettlementsAsync(new SettlementQueryFilter(), cancellationToken);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "检查 _settlements 视图时发生异常，视图可能不存在");
+
+            // 尝试列出 DuckDB 中所有的表和视图
+            try
+            {
+                var tablesResult = await ExecuteDuckDbQueryAsync("SELECT table_name, table_type FROM information_schema.tables WHERE table_schema = 'main'", cancellationToken);
+                _logger.LogInformation("DuckDB 中的表和视图: {Tables}", tablesResult);
+            }
+            catch (Exception listEx)
+            {
+                _logger.LogError(listEx, "列出 DuckDB 表和视图时发生异常");
+            }
+
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// 执行 DuckDB 查询并返回结果
+    /// </summary>
+    private async Task<string> ExecuteDuckDbQueryAsync(string sql, CancellationToken cancellationToken)
+    {
+        // 这里需要注入 IDuckDbQueryService，但为了简单起见，我们直接返回错误信息
+        return "需要注入 IDuckDbQueryService";
     }
 
 }

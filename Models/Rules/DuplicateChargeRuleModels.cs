@@ -30,11 +30,14 @@ public enum DuplicateChargeRuleType
 
 #endregion
 
-#region 规则模型
+#region 规则内涵模型
 
 /// <summary>
-/// 重复收费规则主内涵表模型
+/// 重复收费规则内涵模型（单条规则元素）
 /// </summary>
+/// <remarks>
+/// 每条规则元素包含规则配置参数和所涉及的 A/B 组项目列表
+/// </remarks>
 public class DuplicateChargeRule
 {
     /// <summary>状态</summary>
@@ -72,6 +75,12 @@ public class DuplicateChargeRule
 
     /// <summary>有效结束时间</summary>
     public DateTime? ValidEndDate { get; set; }
+
+    /// <summary>A组项目列表（该规则元素包含的项目）</summary>
+    public IReadOnlyList<RuleGroupAItem> GroupAItems { get; set; } = Array.Empty<RuleGroupAItem>();
+
+    /// <summary>B组项目列表（该规则元素包含的项目）</summary>
+    public IReadOnlyList<RuleGroupBItem> GroupBItems { get; set; } = Array.Empty<RuleGroupBItem>();
 }
 
 #endregion
@@ -116,24 +125,18 @@ public class RuleGroupBItem
 #region 规则集模型
 
 /// <summary>
-/// 重复收费规则集聚合根，将主内涵规则与A/B组项目关联为一个完整规则集
+/// 重复收费规则集聚合根
 /// </summary>
 public class DuplicateChargeRuleSet : IRuleSet
 {
-    /// <summary>规则内涵（单条规则定义）</summary>
-    public DuplicateChargeRule Rule { get; set; } = null!;
+    /// <summary>内涵规则列表（Excel 中的所有规则行）</summary>
+    public IReadOnlyList<DuplicateChargeRule> Rules { get; set; } = Array.Empty<DuplicateChargeRule>();
 
     /// <inheritdoc />
     public string RuleName { get; init; } = string.Empty;
 
     /// <inheritdoc />
     public RuleCategory Category => RuleCategory.重复收费规则;
-
-    /// <summary>A组项目列表</summary>
-    public IReadOnlyList<RuleGroupAItem> GroupAItems { get; set; } = Array.Empty<RuleGroupAItem>();
-
-    /// <summary>B组项目列表</summary>
-    public IReadOnlyList<RuleGroupBItem> GroupBItems { get; set; } = Array.Empty<RuleGroupBItem>();
 }
 
 #endregion

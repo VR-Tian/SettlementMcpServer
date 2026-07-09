@@ -1,5 +1,35 @@
 namespace SettlementMcpServer.Models.Rules;
 
+#region 枚举定义
+
+/// <summary>
+/// 时间间隔类型枚举
+/// </summary>
+public enum TimeIntervalType
+{
+    /// <summary>
+    /// 一次就诊过程：直接判断结算单据的 Numbers 数量是否大于限定次数
+    /// </summary>
+    OneVisit = 1,
+
+    /// <summary>
+    /// 天：根据 TimeInterval 数值计算当前项目编码在时间窗口内出现的次数
+    /// </summary>
+    Day = 3,
+
+    /// <summary>
+    /// 自定义周期（按天数最小单位）：根据 TimeInterval 数值计算当前项目编码在时间窗口内出现的次数
+    /// </summary>
+    CustomDay = 4,
+
+    /// <summary>
+    /// 月：根据 TimeInterval 数值计算当前项目编码在时间窗口内出现的次数
+    /// </summary>
+    Month = 6
+}
+
+#endregion
+
 #region 限定频次规则模型
 
 /// <summary>
@@ -50,7 +80,7 @@ public class FrequencyLimitRule
     public bool? CheckSameExecDept { get; set; }
 
     /// <summary>时间间隔类型</summary>
-    public string TimeIntervalType { get; set; } = string.Empty;
+    public TimeIntervalType TimeIntervalType { get; set; }
 
     /// <summary>有效开始时间</summary>
     public DateTime? ValidStartDate { get; set; }

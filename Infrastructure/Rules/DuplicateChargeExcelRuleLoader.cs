@@ -16,7 +16,7 @@ namespace SettlementMcpServer.Infrastructure.Rules;
 /// 使用 <b>MiniExcel</b> 作为 Excel 读取组件，从 Excel 规则内涵文件中加载三表数据：
 /// </para>
 /// <list type="number">
-///   <item><description>第一个 Sheet 为主内涵表（<see cref="DuplicateChargeRule"/>）</description></item>
+///   <item><description>第一个 Sheet 为内涵规则表（<see cref="DuplicateChargeRule"/>），每行一条规则</description></item>
 ///   <item><description>第二个 Sheet 为分组项目A表（<see cref="RuleGroupAItem"/>）</description></item>
 ///   <item><description>第三个 Sheet 为分组项目B表（<see cref="RuleGroupBItem"/>）</description></item>
 /// </list>
@@ -72,7 +72,7 @@ public sealed class DuplicateChargeExcelRuleLoader : IRuleLoader
         var groupBItems = await ReadSheetAsync<RuleGroupBItemExcelRow>(filePath, sheetNames[2], cancellationToken);
 
         _logger.LogInformation(
-            "Excel 重复收费规则数据加载完成，主内涵表: {RuleCount} 条，分组项目A表: {GroupACount} 条，分组项目B表: {GroupBCount} 条",
+            "Excel 重复收费规则数据加载完成，内涵规则: {RuleCount} 条，分组项目A表: {GroupACount} 条，分组项目B表: {GroupBCount} 条",
             rules.Count, groupAItems.Count, groupBItems.Count);
 
         // 将 Excel 行模型映射为领域模型
@@ -80,25 +80,30 @@ public sealed class DuplicateChargeExcelRuleLoader : IRuleLoader
         var domainGroupAItems = groupAItems.Select(MapToDomainGroupAItem).ToList();
         var domainGroupBItems = groupBItems.Select(MapToDomainGroupBItem).ToList();
 
-        // 构建规则集（规则是一个整体，使用第一行内涵作为规则定义）
+        // 构建规则集（内涵由多条规则组成）
         if (domainRules.Count == 0)
         {
             throw new InvalidOperationException("Excel 文件中未找到有效的重复收费规则数据");
         }
 
-        if (domainRules.Count > 1)
+        // 为每条规则关联对应的 A/B 组项目
+        foreach (var rule in domainRules)
         {
-            _logger.LogWarning(
-                "Excel 内涵表包含 {Count} 行数据，但规则是一个整体，仅使用第一行作为规则定义",
-                domainRules.Count);
+            rule.GroupAItems = domainGroupAItems
+                .Where(g => g.GroupCodeA == rule.GroupCodeA)
+                .ToList()
+                .AsReadOnly();
+
+            rule.GroupBItems = domainGroupBItems
+                .Where(g => g.GroupCodeB == rule.GroupCodeB)
+                .ToList()
+                .AsReadOnly();
         }
 
         var ruleSet = new DuplicateChargeRuleSet
         {
             RuleName = ruleName,
-            Rule = domainRules[0],
-            GroupAItems = domainGroupAItems.AsReadOnly(),
-            GroupBItems = domainGroupBItems.AsReadOnly()
+            Rules = domainRules.AsReadOnly()
         };
 
         _logger.LogInformation("重复收费规则集构建完成，规则名称: {RuleName}", ruleName);
@@ -267,7 +272,7 @@ public sealed class DuplicateChargeExcelRuleLoader : IRuleLoader
     }
 
     /// <summary>
-    /// 主内涵表 Excel 行模型
+    /// 重复收费规则 Excel 行模型
     /// </summary>
     private sealed class DuplicateChargeRuleExcelRow
     {

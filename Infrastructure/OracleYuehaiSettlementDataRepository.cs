@@ -68,7 +68,22 @@ public sealed class OracleSettlementDataRepository : OracleRepositoryBase<Settle
         SettlementQueryFilter filter,
         CancellationToken cancellationToken = default)
     {
-        return await ExecuteFullQueryAsync(_connectionFactory, filter, _logger, cancellationToken);
+        // 诊断：查询表的实际列名
+        using var connection = _connectionFactory.CreateConnection();
+        var columnSql = $"SELECT column_name FROM user_tab_columns WHERE table_name = '{TableName}' ORDER BY column_id";
+        var columns = await connection.QueryAsync<string>(columnSql);
+        _logger.LogDebug("诊断 - Oracle 表 {TableName} 的实际列名：{Columns}", TableName, string.Join(", ", columns));
+        
+        var results = await ExecuteFullQueryAsync(_connectionFactory, filter, _logger, cancellationToken);
+        
+        // 诊断：检查前 5 条数据的 InstitutionCode 值
+        if (results.Count > 0)
+        {
+            var sampleCodes = results.Take(5).Select(r => r.InstitutionCode ?? "NULL").ToList();
+            _logger.LogDebug("诊断 - Oracle 查询结果 InstitutionCode 样本值：{SampleCodes}", string.Join(", ", sampleCodes));
+        }
+        
+        return results;
     }
 
     /// <inheritdoc />

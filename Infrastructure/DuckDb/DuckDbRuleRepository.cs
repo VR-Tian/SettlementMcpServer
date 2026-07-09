@@ -58,8 +58,7 @@ public sealed class DuckDbRuleRepository : IRuleRepository
 
         _logger.LogDebug("执行确保规则表存在（如果不存在则创建）步骤成功");
 
-        using var connection = _connectionFactory.CreateConnection();
-        connection.Open();
+        var connection = _connectionFactory.CreateConnection();
 
         var dbCommand = (DbCommand)connection.CreateCommand();
         dbCommand.CommandText = "SELECT rule_category, rule_json FROM audit_rules WHERE rule_name = $1 LIMIT 1";
@@ -94,8 +93,7 @@ public sealed class DuckDbRuleRepository : IRuleRepository
         // 序列化完整的规则集为 JSON
         var ruleJson = JsonSerializer.Serialize(ruleSet, ruleSet.GetType(), JsonOptions);
 
-        using var connection = _connectionFactory.CreateConnection();
-        connection.Open();
+        var connection = _connectionFactory.CreateConnection();
 
         // 先尝试更新，如果不存在则插入
         var dbCommand = (DbCommand)connection.CreateCommand();
@@ -143,8 +141,7 @@ public sealed class DuckDbRuleRepository : IRuleRepository
     {
         await EnsureTableExistsAsync(cancellationToken);
 
-        using var connection = _connectionFactory.CreateConnection();
-        connection.Open();
+        var connection = _connectionFactory.CreateConnection();
 
         var dbCommand = (DbCommand)connection.CreateCommand();
         dbCommand.CommandText = "SELECT rule_name FROM audit_rules ORDER BY rule_name";
@@ -166,8 +163,7 @@ public sealed class DuckDbRuleRepository : IRuleRepository
     {
         await EnsureTableExistsAsync(cancellationToken);
 
-        using var connection = _connectionFactory.CreateConnection();
-        connection.Open();
+        var connection = _connectionFactory.CreateConnection();
 
         var dbCommand = (DbCommand)connection.CreateCommand();
         dbCommand.CommandText = "SELECT rule_name FROM audit_rules WHERE rule_category = $1 ORDER BY rule_name";
@@ -207,8 +203,7 @@ public sealed class DuckDbRuleRepository : IRuleRepository
     /// <param name="cancellationToken">取消令牌</param>
     private async Task EnsureTableExistsAsync(CancellationToken cancellationToken)
     {
-        using var connection = _connectionFactory.CreateConnection();
-        connection.Open();
+        var connection = _connectionFactory.CreateConnection();
 
         var dbCommand = (DbCommand)connection.CreateCommand();
         dbCommand.CommandText = """

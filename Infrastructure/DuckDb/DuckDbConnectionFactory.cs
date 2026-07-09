@@ -15,13 +15,28 @@ namespace SettlementMcpServer.Infrastructure.DuckDb;
 /// 数据库文件保存在 <c>%TEMP%\SettlementMcpServer\duckdb\settlement.db</c>，
 /// 首次使用时自动创建目录和数据库文件。
 /// </para>
+/// <para>
+/// <b>共享连接：</b>
+/// DuckDB 是嵌入式数据库，同一时间只允许一个进程以读写模式打开数据库文件。
+/// 因此本工厂使用单例共享连接，所有仓储共用同一个连接实例，避免文件锁定冲突。
+/// </para>
 /// </remarks>
-public sealed class DuckDbConnectionFactory : IDbConnectionFactory
+public sealed class DuckDbConnectionFactory : IDbConnectionFactory, IDisposable
 {
     /// <summary>
     /// DuckDB 数据库文件路径
     /// </summary>
     private readonly string _databasePath;
+
+    /// <summary>
+    /// 共享的 DuckDB 连接实例
+    /// </summary>
+    private DuckDBConnection? _sharedConnection;
+
+    /// <summary>
+    /// 锁对象，用于线程安全地创建共享连接
+    /// </summary>
+    private readonly object _lock = new();
 
     /// <summary>
     /// 初始化 DuckDB 连接工厂
@@ -36,19 +51,53 @@ public sealed class DuckDbConnectionFactory : IDbConnectionFactory
     }
 
     /// <summary>
-    /// 创建 DuckDB 数据库连接
+    /// 获取共享的 DuckDB 数据库连接
     /// </summary>
-    /// <returns>未打开的 DuckDB 数据库连接实例</returns>
+    /// <returns>已打开的 DuckDB 数据库连接实例（所有调用方共享）</returns>
     /// <remarks>
     /// <para>
-    /// 连接字符串使用数据库文件路径，DuckDB 会自动创建数据库文件（如果不存在）。
+    /// DuckDB 是嵌入式数据库，同一时间只允许一个进程以读写模式打开数据库文件。
+    /// 因此本方法返回共享连接，而非每次创建新连接。
     /// </para>
     /// <para>
-    /// 调用方必须通过 <c>using</c> 语句确保连接被正确释放。
+    /// 调用方<b>不应</b>使用 <c>using</c> 语句释放此连接，因为它是全局共享的。
+    /// 连接会在应用程序退出时自动释放。
     /// </para>
     /// </remarks>
     public IDbConnection CreateConnection()
     {
-        return new DuckDBConnection($"Data Source={_databasePath}");
+        if (_sharedConnection == null || _sharedConnection.State != ConnectionState.Open)
+        {
+            lock (_lock)
+            {
+                if (_sharedConnection == null || _sharedConnection.State != ConnectionState.Open)
+                {
+                    var connection = new DuckDBConnection($"Data Source={_databasePath}");
+                    connection.Open();
+                    _sharedConnection = connection;
+                }
+            }
+        }
+
+        return _sharedConnection;
+    }
+
+    /// <summary>
+    /// 释放共享连接资源
+    /// </summary>
+    public void Dispose()
+    {
+        lock (_lock)
+        {
+            if (_sharedConnection != null)
+            {
+                if (_sharedConnection.State == ConnectionState.Open)
+                {
+                    _sharedConnection.Close();
+                }
+                _sharedConnection.Dispose();
+                _sharedConnection = null;
+            }
+        }
     }
 }

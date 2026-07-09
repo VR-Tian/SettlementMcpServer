@@ -63,6 +63,20 @@ public sealed class ParquetDataSyncService : IDataSyncService
         var allData = await _Repository.QueryAllSettlementsAsync(filter, cancellationToken);
 
         _logger.LogInformation("从 Oracle 读取到 {Count} 条医保结算数据据", allData.Count);
+
+        // 诊断：检查前 5 条数据的 InstitutionCode 值
+        if (allData.Count > 0)
+        {
+            var sampleInstitutionCodes = allData.Take(5).Select(d => d.InstitutionCode ?? "NULL").ToList();
+            _logger.LogDebug("诊断 - Oracle 数据 InstitutionCode 样本值：{SampleCodes}", string.Join(", ", sampleInstitutionCodes));
+        }
+
+        // 诊断：检查前 5 条数据的 InstitutionCode 值
+        if (allData.Count > 0)
+        {
+            var sampleInstitutionCodes = allData.Take(5).Select(d => d.InstitutionCode ?? "NULL").ToList();
+            _logger.LogDebug("诊断 - Oracle 数据 InstitutionCode 样本值：{SampleCodes}", string.Join(", ", sampleInstitutionCodes));
+        }
         _logger.LogDebug("读取数据后内存使用: {MemoryMB} MB", GC.GetTotalMemory(forceFullCollection: false) / 1024 / 1024);
 
         // 生成 Parquet 文件路径
@@ -438,8 +452,7 @@ public sealed class ParquetDataSyncService : IDataSyncService
         string parquetFilePath,
         CancellationToken cancellationToken)
     {
-        using var connection = _duckDbConnectionFactory.CreateConnection();
-        connection.Open();
+        var connection = _duckDbConnectionFactory.CreateConnection();
 
         // 创建或替换视图
         var sql = $"CREATE OR REPLACE VIEW {viewName} AS SELECT * FROM read_parquet('{parquetFilePath.Replace("\\", "\\\\")}')";
@@ -450,5 +463,63 @@ public sealed class ParquetDataSyncService : IDataSyncService
         await dbCommand.ExecuteNonQueryAsync(cancellationToken);
 
         _logger.LogDebug("已在 DuckDB 中注册视图: {ViewName}", viewName);
+    }
+
+    /// <inheritdoc />
+    public async Task RestoreViewsAsync(CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("开始恢复 DuckDB 视图（从已有的 Parquet 文件）");
+
+        if (!Directory.Exists(_dataDirectory))
+        {
+            _logger.LogWarning("数据目录不存在: {Directory}，跳过视图恢复", _dataDirectory);
+            return;
+        }
+
+        var files = Directory.GetFiles(_dataDirectory, "*.parquet");
+        if (files.Length == 0)
+        {
+            _logger.LogWarning("数据目录中没有找到 Parquet 文件: {Directory}", _dataDirectory);
+            return;
+        }
+
+        _logger.LogDebug("在数据目录中找到 {Count} 个 Parquet 文件", files.Length);
+
+        // 按时间戳排序，找到最新的每个类型的文件
+        var settlementFiles = files
+            .Where(f => Path.GetFileName(f).StartsWith("_settlements_"))
+            .OrderByDescending(f => File.GetCreationTimeUtc(f))
+            .ToList();
+
+        var auditedResultFiles = files
+            .Where(f => Path.GetFileName(f).StartsWith("audited_results_"))
+            .OrderByDescending(f => File.GetCreationTimeUtc(f))
+            .ToList();
+
+        // 恢复 _settlements 视图
+        if (settlementFiles.Count > 0)
+        {
+            var latestFile = settlementFiles[0];
+            _logger.LogInformation("恢复 _settlements 视图，使用文件: {File}", latestFile);
+            await RegisterParquetViewInDuckDbAsync("_settlements", latestFile, cancellationToken);
+        }
+        else
+        {
+            _logger.LogWarning("未找到 _settlements 相关的 Parquet 文件");
+        }
+
+        // 恢复 audited_results 视图
+        if (auditedResultFiles.Count > 0)
+        {
+            var latestFile = auditedResultFiles[0];
+            _logger.LogInformation("恢复 audited_results 视图，使用文件: {File}", latestFile);
+            await RegisterParquetViewInDuckDbAsync("audited_results", latestFile, cancellationToken);
+        }
+        else
+        {
+            _logger.LogWarning("未找到 audited_results 相关的 Parquet 文件");
+        }
+
+        _logger.LogInformation("DuckDB 视图恢复完成");
     }
 }
