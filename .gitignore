@@ -18,6 +18,7 @@ packages/
 # Rider / .NET IDE
 .idea/
 *.sln.iml
+.reasonix/
 
 # VS Code
 .vscode/

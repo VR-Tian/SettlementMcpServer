@@ -140,7 +140,8 @@ public sealed class FrequencyLimitExecutor : IRuleExecutor
                                             v.FeeOccurrenceDate == feeDate &&
                                             v.ViolationItemCode == settlement.MedicalCatalogCode))
                     {
-                        violations.Add(CreateViolation(ruleSet, rule, settlement, feeDate));
+                        violations.Add(CreateViolation(ruleSet, rule, settlement, feeDate,
+                            visitSettlements));
                     }
                 }
             }
@@ -160,7 +161,8 @@ public sealed class FrequencyLimitExecutor : IRuleExecutor
                                             v.FeeOccurrenceDate == feeDate &&
                                             v.ViolationItemCode == settlement.MedicalCatalogCode))
                     {
-                        violations.Add(CreateViolation(ruleSet, rule, settlement, feeDate));
+                        violations.Add(CreateViolation(ruleSet, rule, settlement, feeDate,
+                            visitSettlements));
                     }
                 }
             }
@@ -214,12 +216,15 @@ public sealed class FrequencyLimitExecutor : IRuleExecutor
                 var windowEnd = currentDate;
 
                 // 统计时间窗口内的出现次数
-                var countInWindow = personSettlements
-                    .Count(s =>
+                var windowSettlements = personSettlements
+                    .Where(s =>
                     {
                         var sDate = ParseDate(s.FeeOccurrenceTime);
                         return sDate >= windowStart && sDate <= windowEnd;
-                    });
+                    })
+                    .ToList();
+
+                var countInWindow = windowSettlements.Count;
 
                 var feeDate = ExtractDate(settlement.FeeOccurrenceTime);
                 // 判断住院限定
@@ -236,7 +241,8 @@ public sealed class FrequencyLimitExecutor : IRuleExecutor
                                             v.FeeOccurrenceDate == feeDate &&
                                             v.ViolationItemCode == settlement.MedicalCatalogCode))
                     {
-                        violations.Add(CreateViolation(ruleSet, rule, settlement, feeDate));
+                        violations.Add(CreateViolation(ruleSet, rule, settlement, feeDate,
+                            windowSettlements));
                     }
                 }
                 // 判断门诊限定
@@ -253,7 +259,8 @@ public sealed class FrequencyLimitExecutor : IRuleExecutor
                                             v.FeeOccurrenceDate == feeDate &&
                                             v.ViolationItemCode == settlement.MedicalCatalogCode))
                     {
-                        violations.Add(CreateViolation(ruleSet, rule, settlement, feeDate));
+                        violations.Add(CreateViolation(ruleSet, rule, settlement, feeDate,
+                            windowSettlements));
                     }
                 }
             }
@@ -323,12 +330,15 @@ public sealed class FrequencyLimitExecutor : IRuleExecutor
                 var windowEnd = currentDate;
 
                 // 统计时间窗口内的出现次数
-                var countInWindow = personSettlements
-                    .Count(s =>
+                var windowSettlements = personSettlements
+                    .Where(s =>
                     {
                         var sDate = ParseDate(s.FeeOccurrenceTime);
                         return sDate >= windowStart && sDate <= windowEnd;
-                    });
+                    })
+                    .ToList();
+
+                var countInWindow = windowSettlements.Count;
 
                 var feeDate = ExtractDate(settlement.FeeOccurrenceTime);
 
@@ -346,7 +356,8 @@ public sealed class FrequencyLimitExecutor : IRuleExecutor
                                             v.FeeOccurrenceDate == feeDate &&
                                             v.ViolationItemCode == settlement.MedicalCatalogCode))
                     {
-                        violations.Add(CreateViolation(ruleSet, rule, settlement, feeDate));
+                        violations.Add(CreateViolation(ruleSet, rule, settlement, feeDate,
+                            windowSettlements));
                     }
                 }
                 // 判断门诊限定
@@ -363,7 +374,8 @@ public sealed class FrequencyLimitExecutor : IRuleExecutor
                                             v.FeeOccurrenceDate == feeDate &&
                                             v.ViolationItemCode == settlement.MedicalCatalogCode))
                     {
-                        violations.Add(CreateViolation(ruleSet, rule, settlement, feeDate));
+                        violations.Add(CreateViolation(ruleSet, rule, settlement, feeDate,
+                            windowSettlements));
                     }
                 }
             }
@@ -428,7 +440,8 @@ public sealed class FrequencyLimitExecutor : IRuleExecutor
         FrequencyLimitRuleSet ruleSet,
         FrequencyLimitRule rule,
         Settlement settlement,
-        string feeOccurrenceDate)
+        string feeOccurrenceDate,
+        IEnumerable<Settlement>? relatedSettlements = null)
     {
         return new RuleViolation
         {
@@ -447,7 +460,8 @@ public sealed class FrequencyLimitExecutor : IRuleExecutor
             ViolationAmount = settlement.FeeDetailTotalAmount,
             PromptMessage = rule.PromptMessage,
             ReceivingDeptCode = settlement.ReceivingDeptCode,
-            ReceivingDeptName = settlement.ReceivingDeptName
+            ReceivingDeptName = settlement.ReceivingDeptName,
+            RelatedSettlements = relatedSettlements?.ToList() ?? []
         };
     }
 

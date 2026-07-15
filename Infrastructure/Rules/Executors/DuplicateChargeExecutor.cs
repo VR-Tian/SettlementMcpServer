@@ -126,7 +126,8 @@ public sealed class DuplicateChargeExecutor : IRuleExecutor
 
                 foreach (var settlement in groupBMatches)
                 {
-                    violations.Add(CreateViolation(ruleSet, rule, settlement, feeDate, deptCode));
+                    violations.Add(CreateViolation(ruleSet, rule, settlement, feeDate, deptCode,
+                        groupAMatches.Concat(groupBMatches)));
                 }
             }
         }
@@ -184,7 +185,8 @@ public sealed class DuplicateChargeExecutor : IRuleExecutor
                         currentPrice,
                         maxPrice);
 
-                    violations.Add(CreateViolation(ruleSet, rule, settlement, feeDate, deptCode));
+                    violations.Add(CreateViolation(ruleSet, rule, settlement, feeDate, deptCode,
+                        groupAMatches));
                 }
             }
         }
@@ -238,7 +240,8 @@ public sealed class DuplicateChargeExecutor : IRuleExecutor
 
                     foreach (var settlement in groupBMatches)
                     {
-                        violations.Add(CreateViolation(ruleSet, rule, settlement, feeDate, deptCode));
+                        violations.Add(CreateViolation(ruleSet, rule, settlement, feeDate, deptCode,
+                            groupAMatches.Concat(groupBMatches)));
                     }
                 }
             }
@@ -288,7 +291,8 @@ public sealed class DuplicateChargeExecutor : IRuleExecutor
 
                     foreach (var settlement in groupBMatches)
                     {
-                        violations.Add(CreateViolation(ruleSet, rule, settlement, feeDate, deptCode));
+                        violations.Add(CreateViolation(ruleSet, rule, settlement, feeDate, deptCode,
+                            groupAMatches.Concat(groupBMatches)));
                     }
                 }
             }
@@ -404,7 +408,8 @@ public sealed class DuplicateChargeExecutor : IRuleExecutor
         DuplicateChargeRule rule,
         Settlement settlement,
         string feeOccurrenceDate,
-        string? receivingDeptCode)
+        string? receivingDeptCode,
+        IEnumerable<Settlement>? relatedSettlements = null)
     {
         return new RuleViolation
         {
@@ -421,7 +426,8 @@ public sealed class DuplicateChargeExecutor : IRuleExecutor
             ViolationQuantity = settlement.Quantity,
             ViolationUnitPrice = settlement.UnitPrice,
             ViolationAmount = settlement.FeeDetailTotalAmount,
-            PromptMessage = rule.PromptMessage
+            PromptMessage = rule.PromptMessage,
+            RelatedSettlements = relatedSettlements?.ToList() ?? []
         };
     }
     #endregion

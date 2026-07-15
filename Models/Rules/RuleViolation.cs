@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using SettlementMcpServer.Models;
 
 namespace SettlementMcpServer.Models.Rules;
 
@@ -75,4 +76,20 @@ public class RuleViolation
     /// <summary>受单科室名称</summary>
     [JsonPropertyName("受单科室名称")]
     public string? ReceivingDeptName { get; set; }
+
+    /// <summary>
+    /// 关联项目列表（根据规则内涵逻辑组成的医保结算费用项目）
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// 记录当前违规所涉及的关联医保结算费用项目。例如：
+    /// </para>
+    /// <list type="bullet">
+    ///   <item><description>重复收费-跨组共存：A组和B组中所有匹配的费用项目</description></item>
+    ///   <item><description>重复收费-组内重复低价：同组内所有匹配的费用项目</description></item>
+    ///   <item><description>限定频次：同一时间窗口内所有超限的费用项目</description></item>
+    /// </list>
+    /// </remarks>
+    [JsonPropertyName("关联项目")]
+    public List<Settlement> RelatedSettlements { get; set; } = [];
 }
